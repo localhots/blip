@@ -1,7 +1,7 @@
 .PHONY: test bench
 
 test:
-	go test -v ./log
+	go test -v .
 
 bench:
-	go test -v ./log -bench=. -benchmem -run=Benchmark
+	go test -v . -bench=. -benchmem -run=Benchmark

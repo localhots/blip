@@ -19,6 +19,7 @@ func TestLogger(t *testing.T) {
 	ctx := context.Background()
 	err := errors.New("task already exists")
 
+	log.Debug(ctx, "Message without fields")
 	log.Debug(ctx, "Callback received", log.F{
 		"device_unique_id": "G4000E-1000-F",
 		"task_id":          123456,

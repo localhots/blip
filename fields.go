@@ -83,6 +83,9 @@ func getFields() *[]Field {
 }
 
 func putFields(fields *[]Field) {
+	if fields == nil {
+		return
+	}
 	*fields = (*fields)[:0] // Reset
 	fieldsPool.Put(fields)
 }

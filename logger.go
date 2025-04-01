@@ -137,8 +137,8 @@ func (l *Logger) print(lev Level, msg string, fields *[]Field) {
 
 	l.printTime(buf)
 	l.printLevel(buf, lev)
-	l.printMessage(buf, msg, len(*fields) > 0)
-	l.printFields(buf, lev, *fields)
+	l.printMessage(buf, msg, (fields != nil && len(*fields) > 0))
+	l.printFields(buf, lev, fields)
 	putFields(fields)
 	buf.writeNewline()
 	l.printStackTrace(buf, lev)
@@ -189,12 +189,15 @@ func (l *Logger) printMessage(buf *buffer, msg string, needsPad bool) {
 	}
 }
 
-func (l *Logger) printFields(buf *buffer, lev Level, fields []Field) {
+func (l *Logger) printFields(buf *buffer, lev Level, fields *[]Field) {
+	if fields == nil || len(*fields) == 0 {
+		return
+	}
 	if l.cfg.SortFields {
-		sortFields(fields)
+		sortFields(*fields)
 	}
 
-	for i, f := range fields {
+	for i, f := range *fields {
 		if i > 0 {
 			buf.writeSpace()
 		}
