@@ -42,9 +42,8 @@ func (e JSONEncoder) EncodeLevel(buf *Buffer, lev Level) {
 func (e JSONEncoder) EncodeMessage(buf *Buffer, msg string) {
 	buf.WriteBytes('"')
 	buf.WriteString(e.KeyMsg)
-	buf.WriteBytes('"', ':', '"')
-	buf.WriteString(msg)
-	buf.WriteBytes('"')
+	buf.WriteBytes('"', ':')
+	buf.WriteEscapedString(msg)
 }
 
 func (e JSONEncoder) EncodeFields(buf *Buffer, lev Level, fields *[]Field) {
