@@ -162,7 +162,6 @@ func (buf *Buffer) WriteEscapedString(s string) {
 }
 
 func (buf *Buffer) writeEscapedASCII(b byte) {
-	const hex = "0123456789abcdef"
 	switch b {
 	case '"', '\\':
 		buf.WriteBytes('\\', b)
@@ -177,7 +176,7 @@ func (buf *Buffer) writeEscapedASCII(b byte) {
 	case '\t':
 		buf.WriteBytes('\\', 't')
 	default:
-		buf.WriteBytes('\\', 'u', '0', '0', hex[b>>4], hex[b&0xF])
+		// Ignore other control characters
 	}
 }
 
@@ -195,6 +194,7 @@ func (buf *Buffer) writeEscapedUTF8(s string, i int) int {
 
 func (buf *Buffer) WriteBase64(data []byte) {
 	buf.WriteBytes('"')
+	// TODO: Make encoding configurable
 	buf.b = base64.StdEncoding.AppendEncode(buf.b, data)
 	buf.WriteBytes('"')
 }
