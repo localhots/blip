@@ -46,9 +46,41 @@ func TestLogger(t *testing.T) {
 	log.Error(ctx, "Failed to process task", log.Cause(err), log.F{
 		"task_id": 123456,
 	})
+}
+
+func TestFatal(t *testing.T) {
+	cfg := blip.DefaultConfig()
+	log.Setup(cfg)
+	ctx := context.Background()
+	err := errors.New("task already exists")
+
 	log.Fatal(ctx, "Failed to start service", log.Cause(err), log.F{
 		"service": "api",
 	})
+}
+
+//
+// Benchmarks
+//
+
+func BenchmarkJSON(b *testing.B) {
+	log.Setup(blip.Config{
+		Level:           blip.LevelDebug,
+		Output:          io.Discard,
+		StackTraceLevel: blip.LevelError,
+		Encoder:         blip.NewJSONEncoder(blip.DefaultConfig()),
+	})
+	ctx := context.Background()
+
+	b.ResetTimer()
+	for range b.N {
+		log.Info(ctx, "Starting task", log.F{
+			"device_unique_id": "G4000E-1000-F",
+			"task_id":          123456,
+			"status":           "success",
+			"template_name":    "index.tpl",
+		})
+	}
 }
 
 func BenchmarkBare(b *testing.B) {

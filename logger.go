@@ -13,6 +13,7 @@ import (
 
 type Logger struct {
 	cfg       Config
+	enc       Encoder
 	timeCache func(time.Time) string
 	lock      sync.Mutex
 }
@@ -20,6 +21,7 @@ type Logger struct {
 type Config struct {
 	Level           Level
 	Output          io.Writer
+	Encoder         Encoder
 	Time            bool
 	TimeFormat      string
 	TimePrecision   time.Duration
@@ -33,7 +35,8 @@ type Config struct {
 type Level int
 
 const (
-	LevelTrace Level = iota
+	levelInvalid Level = iota
+	LevelTrace
 	LevelDebug
 	LevelInfo
 	LevelWarn
@@ -61,18 +64,42 @@ var (
 
 	DurationPrecision = time.Millisecond
 	TimeFormat        = time.RFC3339
+
+	timeNow = time.Now
 )
 
 func New(cfg Config) *Logger {
-	l := &Logger{cfg: cfg}
-	if l.cfg.TimePrecision > 0 {
+	// Set fallback values
+	if cfg.Level < LevelTrace || cfg.Level > LevelFatal {
+		cfg.Level = LevelInfo
+	}
+	if cfg.Output == nil {
+		cfg.Output = os.Stderr
+	}
+	if cfg.TimeFormat == "" {
+		// Assume empty time format is the default one, not disabled
+		cfg.TimeFormat = defaultTimeFormat
+	}
+	if cfg.MinMessageWidth < 0 {
+		// Consider negative message width as no padding
+		cfg.MinMessageWidth = 0
+	}
+	if cfg.StackTraceLevel < LevelTrace || cfg.StackTraceLevel > LevelFatal {
+		cfg.StackTraceLevel = LevelError
+	}
+	if cfg.Encoder == nil {
+		cfg.Encoder = NewConsoleEncoder(cfg)
+	}
+
+	l := &Logger{cfg: cfg, enc: cfg.Encoder}
+	if cfg.TimePrecision > 0 {
 		l.timeCache = timeCache(l.cfg.TimeFormat, l.cfg.TimePrecision)
 	}
 	return l
 }
 
 func DefaultConfig() Config {
-	return Config{
+	cfg := Config{
 		Level:           LevelInfo,
 		Output:          os.Stderr,
 		Time:            true,
@@ -84,6 +111,8 @@ func DefaultConfig() Config {
 		StackTraceLevel: LevelError,
 		StackTraceSkip:  4,
 	}
+	cfg.Encoder = NewConsoleEncoder(cfg)
+	return cfg
 }
 
 func (l *Logger) Trace(ctx context.Context, msg string, fields ...F) {
@@ -135,116 +164,37 @@ func (l *Logger) print(lev Level, msg string, fields *[]Field) {
 	buf := getBuffer()
 	defer putBuffer(buf)
 
-	l.printTime(buf)
-	l.printLevel(buf, lev)
-	l.printMessage(buf, msg, (fields != nil && len(*fields) > 0))
-	l.printFields(buf, lev, fields)
-	putFields(fields)
-	buf.writeNewline()
-	l.printStackTrace(buf, lev)
+	if l.cfg.Time {
+		l.enc.EncodeTime(buf, l.timeString())
+	}
+	l.enc.EncodeLevel(buf, lev)
+	l.enc.EncodeMessage(buf, msg)
+	l.enc.EncodeFields(buf, lev, fields)
+	if fields != nil {
+		putFields(fields)
+	}
+	if lev >= l.cfg.StackTraceLevel {
+		l.enc.EncodeStackTrace(buf, lev, l.cfg.StackTraceSkip)
+	}
 
 	l.lock.Lock()
 	l.cfg.Output.Write(buf.b)
 	l.lock.Unlock()
 }
 
-func (l *Logger) printTime(buf *buffer) {
-	if !l.cfg.Time {
-		return
-	}
-
-	t := time.Now()
-	if l.timeCache != nil {
-		buf.writeString(l.timeCache(t))
-	} else {
-		buf.writeTime(t, l.cfg.TimeFormat)
-	}
-	buf.writeSpace()
-}
-
-func (l *Logger) printLevel(buf *buffer, lev Level) {
-	l.writeColorized(buf, lev, l.levelName(lev))
-	buf.writeSpace()
-}
-
-func (l *Logger) printMessage(buf *buffer, msg string, needsPad bool) {
-	buf.writeString(msg)
-	if l.cfg.MinMessageWidth > 0 {
-		// Pad the message to the configured width +2 spaces to separate it from
-		// the fields.
-		for range l.cfg.MinMessageWidth + 2 - len(msg) {
-			buf.writeSpace()
-		}
-		// If the message is long enough not to be padded, add an extra space to
-		// separate it from the fields
-		if len(msg) > l.cfg.MinMessageWidth {
-			// Separate message from fields with 2 spaces
-			buf.writeSpace()
-			buf.writeSpace()
-		}
-	} else if needsPad {
-		// Separate message from fields with 2 spaces
-		buf.writeSpace()
-		buf.writeSpace()
-	}
-}
-
-func (l *Logger) printFields(buf *buffer, lev Level, fields *[]Field) {
-	if fields == nil || len(*fields) == 0 {
-		return
-	}
-	if l.cfg.SortFields {
-		sortFields(*fields)
-	}
-
-	for i, f := range *fields {
-		if i > 0 {
-			buf.writeSpace()
-		}
-		l.writeColorized(buf, lev, f.Key)
-		buf.writeByte('=')
-		encodeField(buf, f.Value)
-	}
-}
-
-func (l *Logger) printStackTrace(buf *buffer, lev Level) {
-	if lev >= l.cfg.StackTraceLevel {
-		// Print stack trace but skip the first 4 frames which are part of the
-		// logger itself.
-		buf.writeString(stackTrace(l.cfg.StackTraceSkip))
-		buf.writeNewline()
-	}
-}
-
 //
 // Helpers
 //
 
-func (l *Logger) writeColorized(buf *buffer, lev Level, str string) {
-	if !l.cfg.Color {
-		buf.writeString(str)
-		return
+func (l *Logger) timeString() string {
+	if l.timeCache != nil {
+		return l.timeCache(timeNow())
 	}
-
-	switch lev {
-	case LevelTrace, LevelDebug:
-		buf.writeString(colorOffWhite)
-	case LevelInfo:
-		buf.writeString(colorCyan)
-	case LevelWarn:
-		buf.writeString(colorYellow)
-	case LevelError:
-		buf.writeString(colorRed)
-	case LevelPanic, LevelFatal:
-		buf.writeString(colorRedBg)
-		buf.writeString(colorWhite)
-	}
-	buf.writeString(str)
-	buf.writeString(colorReset)
+	return timeNow().Format(l.cfg.TimeFormat)
 }
 
 // levelName returns level label that is consistently 4 characters long.
-func (l *Logger) levelName(lev Level) string {
+func (lev Level) String() string {
 	switch lev {
 	case LevelTrace:
 		return "TRAC"
