@@ -3,6 +3,7 @@ package blip
 import (
 	"encoding/json"
 	"time"
+	"unicode/utf8"
 )
 
 type JSONEncoder struct {
@@ -178,34 +179,11 @@ func (e JSONEncoder) writeEscapedASCII(buf *Buffer, b byte) {
 }
 
 func (e JSONEncoder) writeEscapedUTF8(buf *Buffer, s string, i int) int {
-	b0 := s[i]
-	if b0 < 0x80 {
-		e.writeEscapedASCII(buf, b0)
-		return 1
-	}
-
-	// Manual UTF-8 decode (up to 4 bytes)
-	var r rune
-	var size int
-	switch {
-	case b0 < 0xE0 && i+1 < len(s): // 2-byte
-		b1 := s[i+1]
-		r = rune(b0&0x1F)<<6 | rune(b1&0x3F)
-		size = 2
-	case b0 < 0xF0 && i+2 < len(s): // 3-byte
-		b1, b2 := s[i+1], s[i+2]
-		r = rune(b0&0x0F)<<12 | rune(b1&0x3F)<<6 | rune(b2&0x3F)
-		size = 3
-	case i+3 < len(s): // 4-byte
-		b1, b2, b3 := s[i+1], s[i+2], s[i+3]
-		r = rune(b0&0x07)<<18 | rune(b1&0x3F)<<12 | rune(b2&0x3F)<<6 | rune(b3&0x3F)
-		size = 4
-	default:
-		// Invalid or truncated
+	r, size := utf8.DecodeRuneInString(s[i:])
+	if r == utf8.RuneError && size == 1 {
 		buf.WriteBytes('\\', 'u', 'f', 'f', 'f', 'd')
 		return 1
 	}
-
 	buf.WriteRune(r)
 	return size
 }
