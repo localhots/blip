@@ -119,37 +119,43 @@ func (buf *Buffer) WriteTime(t time.Time, format string) {
 func (buf *Buffer) WriteEscapedString(s string) {
 	buf.WriteBytes('"')
 
-	start := 0
-	for i := 0; i < len(s); {
-		b := s[i]
+	// last is the last index of the string that has been written to the buffer.
+	// cur is the current index of the string being processed.
+	//
+	// Read the string byte by byte and escape any characters that need it.
+	// Check for ASCII characters first and then for other characters outside of
+	// the ASCII printable range.
+	last := 0
+	for cur := 0; cur < len(s); {
+		b := s[cur]
 
 		// ASCII needing escape
 		if b < 0x20 || b == '"' || b == '\\' {
-			if start < i {
-				buf.WriteString(s[start:i])
+			if last < cur {
+				buf.WriteString(s[last:cur])
 			}
 			buf.writeEscapedASCII(b)
-			i++
-			start = i
+			cur++
+			last = cur
 			continue
 		}
 
 		// Probably not ASCII
 		if b >= 0x80 {
-			if start < i {
-				buf.WriteString(s[start:i])
+			if last < cur {
+				buf.WriteString(s[last:cur])
 			}
-			size := buf.writeEscapedUTF8(s, i)
-			i += size
-			start = i
+			size := buf.writeEscapedUTF8(s, cur)
+			cur += size
+			last = cur
 			continue
 		}
 
-		// No escape needed
-		i++
+		cur++
 	}
-	if start < len(s) {
-		buf.WriteString(s[start:])
+	// Flush remaining characters that don't need escaping
+	if last < len(s) {
+		buf.WriteString(s[last:])
 	}
 
 	buf.WriteBytes('"')
@@ -178,6 +184,8 @@ func (buf *Buffer) writeEscapedASCII(b byte) {
 func (buf *Buffer) writeEscapedUTF8(s string, i int) int {
 	r, size := utf8.DecodeRuneInString(s[i:])
 	if r == utf8.RuneError && size == 1 {
+		// \uFFFD is the replacement character for invalid UTF-8 sequences.
+		// It looks like a diamond with a question mark inside.
 		buf.WriteBytes('\\', 'u', 'f', 'f', 'f', 'd')
 		return 1
 	}
