@@ -195,20 +195,7 @@ func (buf *Buffer) writeEscapedUTF8(s string, i int) int {
 
 func (buf *Buffer) WriteBase64(data []byte) {
 	buf.WriteBytes('"')
-
-	// Calculate the needed size for base64 encoding
-	needed := base64.StdEncoding.EncodedLen(len(data))
-
-	// Check if the buffer has enough capacity
-	if cap(buf.b)-len(buf.b) < needed {
-		// Not enough space, append the required amount
-		buf.b = append(buf.b, make([]byte, needed)...)
-	}
-
-	// Encode the data into the buffer (now safely large enough)
-	start := len(buf.b)
-	base64.StdEncoding.Encode(buf.b[start:], data)
-
+	buf.b = base64.StdEncoding.AppendEncode(buf.b, data)
 	buf.WriteBytes('"')
 }
 
