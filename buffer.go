@@ -1,6 +1,7 @@
 package blip
 
 import (
+	"encoding/base64"
 	"fmt"
 	"strconv"
 	"sync"
@@ -79,12 +80,6 @@ func (buf *Buffer) WriteString(str string) {
 	buf.b = append(buf.b, str...)
 }
 
-func (buf *Buffer) WriteStringSegment(s string, from, to int) {
-	for i := from; i < to; i++ {
-		buf.b = append(buf.b, s[i])
-	}
-}
-
 func (buf *Buffer) WriteRune(r rune) {
 	var tmp [utf8.UTFMax]byte
 	n := utf8.EncodeRune(tmp[:], r)
@@ -119,6 +114,94 @@ func (buf *Buffer) WriteDuration(d time.Duration) {
 // WriteTime writes a time.Time value to the buffer using the specified format.
 func (buf *Buffer) WriteTime(t time.Time, format string) {
 	buf.b = t.AppendFormat(buf.b, format)
+}
+
+func (buf *Buffer) WriteEscapedString(s string) {
+	buf.WriteBytes('"')
+
+	start := 0
+	for i := 0; i < len(s); {
+		b := s[i]
+
+		// ASCII needing escape
+		if b < 0x20 || b == '"' || b == '\\' {
+			if start < i {
+				buf.WriteString(s[start:i])
+			}
+			buf.writeEscapedASCII(b)
+			i++
+			start = i
+			continue
+		}
+
+		// Probably not ASCII
+		if b >= 0x80 {
+			if start < i {
+				buf.WriteString(s[start:i])
+			}
+			size := buf.writeEscapedUTF8(s, i)
+			i += size
+			start = i
+			continue
+		}
+
+		// No escape needed
+		i++
+	}
+	if start < len(s) {
+		buf.WriteString(s[start:])
+	}
+
+	buf.WriteBytes('"')
+}
+
+func (buf *Buffer) writeEscapedASCII(b byte) {
+	const hex = "0123456789abcdef"
+	switch b {
+	case '"', '\\':
+		buf.WriteBytes('\\', b)
+	case '\b':
+		buf.WriteBytes('\\', 'b')
+	case '\f':
+		buf.WriteBytes('\\', 'f')
+	case '\n':
+		buf.WriteBytes('\\', 'n')
+	case '\r':
+		buf.WriteBytes('\\', 'r')
+	case '\t':
+		buf.WriteBytes('\\', 't')
+	default:
+		buf.WriteBytes('\\', 'u', '0', '0', hex[b>>4], hex[b&0xF])
+	}
+}
+
+func (buf *Buffer) writeEscapedUTF8(s string, i int) int {
+	r, size := utf8.DecodeRuneInString(s[i:])
+	if r == utf8.RuneError && size == 1 {
+		buf.WriteBytes('\\', 'u', 'f', 'f', 'f', 'd')
+		return 1
+	}
+	buf.WriteRune(r)
+	return size
+}
+
+func (buf *Buffer) WriteBase64(data []byte) {
+	buf.WriteBytes('"')
+
+	// Calculate the needed size for base64 encoding
+	needed := base64.StdEncoding.EncodedLen(len(data))
+
+	// Check if the buffer has enough capacity
+	if cap(buf.b)-len(buf.b) < needed {
+		// Not enough space, append the required amount
+		buf.b = append(buf.b, make([]byte, needed)...)
+	}
+
+	// Encode the data into the buffer (now safely large enough)
+	start := len(buf.b)
+	base64.StdEncoding.Encode(buf.b[start:], data)
+
+	buf.WriteBytes('"')
 }
 
 //

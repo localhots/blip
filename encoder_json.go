@@ -3,7 +3,6 @@ package blip
 import (
 	"encoding/json"
 	"time"
-	"unicode/utf8"
 )
 
 type JSONEncoder struct {
@@ -81,9 +80,9 @@ func (e JSONEncoder) writeSafeField(buf *Buffer, key, val string) {
 func (e JSONEncoder) writeAny(buf *Buffer, val any) {
 	switch v := val.(type) {
 	case string:
-		e.writeJSONString(buf, v)
+		buf.WriteEscapedString(v)
 	case []byte:
-		panic("TODO: Implement something for []byte")
+		buf.WriteBase64(v)
 	case nil:
 		buf.WriteString("null")
 	case bool:
@@ -122,68 +121,8 @@ func (e JSONEncoder) writeAny(buf *Buffer, val any) {
 		buf.WriteBytes('"')
 	default:
 		if err := json.NewEncoder(buf).Encode(v); err != nil {
+			// FIXME
 			panic(err)
 		}
 	}
-}
-
-// JSON strings
-
-func (e JSONEncoder) writeJSONString(buf *Buffer, s string) {
-	buf.WriteBytes('"')
-
-	start := 0
-	for i := 0; i < len(s); i++ {
-		b := s[i]
-		if b < 0x20 || b == '"' || b == '\\' {
-			if start < i {
-				buf.WriteStringSegment(s, start, i)
-			}
-			e.writeEscapedASCII(buf, b)
-			start = i + 1
-		} else if b >= 0x80 {
-			if start < i {
-				buf.WriteString(s[start:i])
-			}
-			size := e.writeEscapedUTF8(buf, s, i)
-			start = i + size
-			i = start - 1
-		}
-	}
-
-	if start < len(s) {
-		buf.WriteStringSegment(s, start, len(s))
-	}
-
-	buf.WriteBytes('"')
-}
-
-func (e JSONEncoder) writeEscapedASCII(buf *Buffer, b byte) {
-	const hex = "0123456789abcdef"
-	switch b {
-	case '"', '\\':
-		buf.WriteBytes('\\', b)
-	case '\b':
-		buf.WriteBytes('\\', 'b')
-	case '\f':
-		buf.WriteBytes('\\', 'f')
-	case '\n':
-		buf.WriteBytes('\\', 'n')
-	case '\r':
-		buf.WriteBytes('\\', 'r')
-	case '\t':
-		buf.WriteBytes('\\', 't')
-	default:
-		buf.WriteBytes('\\', 'u', '0', '0', hex[b>>4], hex[b&0xF])
-	}
-}
-
-func (e JSONEncoder) writeEscapedUTF8(buf *Buffer, s string, i int) int {
-	r, size := utf8.DecodeRuneInString(s[i:])
-	if r == utf8.RuneError && size == 1 {
-		buf.WriteBytes('\\', 'u', 'f', 'f', 'f', 'd')
-		return 1
-	}
-	buf.WriteRune(r)
-	return size
 }
