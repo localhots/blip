@@ -124,7 +124,7 @@ func (buf *Buffer) WriteEscapedString(s string) {
 	//
 	// Read the string byte by byte and escape any characters that need it.
 	// Check for ASCII characters first and then for other characters outside of
-	// the ASCII printable range.
+	// the ASCII printable range. Write to the buffer as we go.
 	last := 0
 	for cur := 0; cur < len(s); {
 		b := s[cur]
