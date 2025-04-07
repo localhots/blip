@@ -53,9 +53,9 @@ func (e JSONEncoder) EncodeFields(buf *Buffer, lev Level, fields *[]Field) {
 	}
 
 	for _, f := range *fields {
-		buf.WriteBytes(',', '"')
-		buf.WriteString(f.Key)
-		buf.WriteBytes('"', ':')
+		buf.WriteBytes(',')
+		buf.WriteEscapedString(f.Key)
+		buf.WriteBytes(':')
 		e.writeAny(buf, f.Value)
 	}
 }

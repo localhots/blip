@@ -104,7 +104,7 @@ func FuzzBlip(f *testing.F) {
 		}
 		var out any
 		if err := json.Unmarshal(buf.Bytes(), &out); err != nil {
-			t.Logf("msg=%q fkey=%q fval=%q", msg, fkey, fval)
+			t.Logf("msg=%q key=%q val=%q", msg, fkey, fval)
 			t.Log(buf.String())
 			t.Errorf("Failed to unmarshal JSON: %v", err)
 		}

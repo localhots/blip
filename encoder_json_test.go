@@ -79,7 +79,7 @@ func validateAndPrintJSON(t *testing.T, buf bytes.Buffer) {
 		t.Error("Expected non-empty buffer")
 	}
 
-	var data map[string]interface{}
+	var data map[string]any
 	if err := json.Unmarshal(buf.Bytes(), &data); err != nil {
 		t.Errorf("Failed to unmarshal JSON: %v", err)
 	}
