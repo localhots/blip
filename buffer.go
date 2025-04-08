@@ -1,106 +1,196 @@
 package blip
 
 import (
+	"encoding/base64"
 	"fmt"
 	"strconv"
 	"sync"
 	"time"
+	"unicode/utf8"
 )
 
-type buffer struct {
+// Buffer is a byte buffer used for encoding log entries.
+// WARNING: Buffer should not be initialized manually. It is pooled to reduce
+// allocations.
+type Buffer struct {
 	b []byte
 }
 
 const bufferSize = 1024
 
-func (buf *buffer) writeSpace() {
-	buf.writeByte(' ')
-}
-
-func (buf *buffer) writeNewline() {
-	buf.writeByte('\n')
-}
-
 //
 // Encoding
 //
 
-func encodeField(buf *buffer, val any) {
+// WriteAny writes a value of any type to the buffer. It handles various types
+// and falls back to fmt.Sprint for unsupported types.
+func (buf *Buffer) WriteAny(val any) {
 	switch v := val.(type) {
 	case string:
-		buf.writeString(v)
+		buf.WriteString(v)
 	case []byte:
-		buf.writeBytes(v)
+		buf.WriteBytes(v...)
 	case int:
-		buf.writeInt(int64(v))
+		buf.WriteInt(int64(v))
 	case int8:
-		buf.writeInt(int64(v))
+		buf.WriteInt(int64(v))
 	case int16:
-		buf.writeInt(int64(v))
+		buf.WriteInt(int64(v))
 	case int32:
-		buf.writeInt(int64(v))
+		buf.WriteInt(int64(v))
 	case int64:
-		buf.writeInt(v)
+		buf.WriteInt(v)
 	case uint:
-		buf.writeUint(uint64(v))
+		buf.WriteUint(uint64(v))
 	case uint8:
-		buf.writeUint(uint64(v))
+		buf.WriteUint(uint64(v))
 	case uint16:
-		buf.writeUint(uint64(v))
+		buf.WriteUint(uint64(v))
 	case uint32:
-		buf.writeUint(uint64(v))
+		buf.WriteUint(uint64(v))
 	case uint64:
-		buf.writeUint(v)
+		buf.WriteUint(v)
 	case float32:
-		buf.writeFloat(float64(v), 32)
+		buf.WriteFloat(float64(v), 32)
 	case float64:
-		buf.writeFloat(v, 64)
+		buf.WriteFloat(v, 64)
 	case bool:
-		buf.writeBool(v)
+		buf.WriteBool(v)
 	case time.Duration:
-		buf.writeDuration(v.Truncate(DurationPrecision))
+		buf.WriteDuration(v.Truncate(DurationFieldPrecision))
 	case time.Time:
-		buf.writeTime(v, TimeFormat)
+		buf.WriteTime(v, TimeFieldFormat)
 	default:
 		// TODO: Add support for custom encoders
-		buf.writeString(fmt.Sprint(v))
+		buf.WriteString(fmt.Sprint(v))
 	}
 }
 
-func (buf *buffer) writeByte(b byte) {
-	buf.b = append(buf.b, b)
+// Write implements the io.Writer interface.
+func (buf *Buffer) Write(b []byte) (int, error) {
+	buf.b = append(buf.b, b...)
+	return len(b), nil
 }
 
-func (buf *buffer) writeBytes(b []byte) {
+// WriteBytes writes a byte slice to the buffer.
+func (buf *Buffer) WriteBytes(b ...byte) {
 	buf.b = append(buf.b, b...)
 }
 
-func (buf *buffer) writeString(str string) {
+// WriteString writes a string to the buffer.
+func (buf *Buffer) WriteString(str string) {
 	buf.b = append(buf.b, str...)
 }
 
-func (buf *buffer) writeInt(i int64) {
+// WriteRune writes a rune to the buffer. It encodes the rune as UTF-8.
+func (buf *Buffer) WriteRune(r rune) {
+	buf.b = utf8.AppendRune(buf.b, r)
+}
+
+// WriteInt writes an int64 value to the buffer.
+func (buf *Buffer) WriteInt(i int64) {
 	buf.b = strconv.AppendInt(buf.b, i, 10)
 }
 
-func (buf *buffer) writeUint(i uint64) {
+// WriteUint writes a uint64 value to the buffer.
+func (buf *Buffer) WriteUint(i uint64) {
 	buf.b = strconv.AppendUint(buf.b, i, 10)
 }
 
-func (buf *buffer) writeFloat(f float64, bitSize int) {
+// WriteFloat writes a float64 value to the buffer with the specified bit size.
+func (buf *Buffer) WriteFloat(f float64, bitSize int) {
 	buf.b = strconv.AppendFloat(buf.b, f, 'f', -1, bitSize)
 }
 
-func (buf *buffer) writeBool(b bool) {
+// WriteBool writes a boolean value to the buffer.
+func (buf *Buffer) WriteBool(b bool) {
 	buf.b = strconv.AppendBool(buf.b, b)
 }
 
-func (buf *buffer) writeDuration(d time.Duration) {
+// WriteDuration writes a time.Duration value to the buffer.
+func (buf *Buffer) WriteDuration(d time.Duration) {
 	buf.b = append(buf.b, d.String()...)
 }
 
-func (buf *buffer) writeTime(t time.Time, format string) {
+// WriteTime writes a time.Time value to the buffer using the specified format.
+func (buf *Buffer) WriteTime(t time.Time, format string) {
 	buf.b = t.AppendFormat(buf.b, format)
+}
+
+// WriteEscapedString writes a string to the buffer, escaping special characters
+// as needed. It handles both ASCII and Unicode characters. The string is
+// enclosed in double quotes.
+func (buf *Buffer) WriteEscapedString(str string) {
+	buf.WriteBytes('"')
+	// last is the last index of the string that has been written to the buffer.
+	// cur is the current index of the string being processed.
+	//
+	// Read the string byte by byte and escape any characters that need it.
+	// Check for ASCII characters first and then for other characters outside of
+	// the ASCII printable range. Write to the buffer as we go.
+	last := 0
+	for cur := 0; cur < len(str); {
+		b := str[cur]
+		if b < 0x20 || b == '"' || b == '\\' || b >= 0x80 {
+			// Write unescaped segment
+			if last < cur {
+				buf.WriteString(str[last:cur])
+			}
+			if b >= 0x80 {
+				size := buf.writeEscapedUTF8(str[cur:])
+				cur += size
+			} else {
+				buf.writeEscapedASCII(b)
+				cur++
+			}
+			last = cur
+		} else {
+			cur++
+		}
+	}
+	// Flush remaining characters that don't need escaping
+	if last < len(str) {
+		buf.WriteString(str[last:])
+	}
+	buf.WriteBytes('"')
+}
+
+// WriteBase64 writes a byte slice to the buffer as a base64-encoded string.
+func (buf *Buffer) WriteBase64(b64enc *base64.Encoding, data []byte) {
+	buf.WriteBytes('"')
+	buf.b = b64enc.AppendEncode(buf.b, data)
+	buf.WriteBytes('"')
+}
+
+func (buf *Buffer) writeEscapedASCII(b byte) {
+	switch b {
+	case '"', '\\':
+		buf.WriteBytes('\\', b)
+	case '\b':
+		buf.WriteBytes('\\', 'b')
+	case '\f':
+		buf.WriteBytes('\\', 'f')
+	case '\n':
+		buf.WriteBytes('\\', 'n')
+	case '\r':
+		buf.WriteBytes('\\', 'r')
+	case '\t':
+		buf.WriteBytes('\\', 't')
+	default:
+		// Ignore other control characters
+	}
+}
+
+func (buf *Buffer) writeEscapedUTF8(str string) int {
+	r, size := utf8.DecodeRuneInString(str)
+	if r == utf8.RuneError && size == 1 {
+		// \uFFFD is the replacement character for invalid UTF-8 sequences (�).
+		// It looks like a diamond with a question mark inside.
+		buf.WriteBytes('\\', 'u', 'f', 'f', 'f', 'd')
+		return 1
+	}
+	buf.WriteRune(r)
+	return size
 }
 
 //
@@ -110,17 +200,17 @@ func (buf *buffer) writeTime(t time.Time, format string) {
 // Buffers are pooled to reduce allocations.
 var bufferPool = sync.Pool{
 	New: func() any {
-		buf := buffer{make([]byte, 0, bufferSize)}
+		buf := Buffer{make([]byte, 0, bufferSize)}
 		return &buf
 	},
 }
 
-func getBuffer() *buffer {
-	s, _ := bufferPool.Get().(*buffer)
-	s.b = s.b[:0] // Reset the underlying slice
-	return s
+func getBuffer() *Buffer {
+	buf, _ := bufferPool.Get().(*Buffer)
+	return buf
 }
 
-func putBuffer(buf *buffer) {
+func putBuffer(buf *Buffer) {
+	buf.b = buf.b[:0] // Reset the underlying slice
 	bufferPool.Put(buf)
 }
