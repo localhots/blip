@@ -1,7 +1,5 @@
-version: 2
-
 run:
-  timeout: 5m
+  timeout: 30s
 
 output:
   sort-results: true
@@ -22,6 +20,7 @@ linters:
     - errname
     - errorlint
     - goconst
+    - goimports
     - gocritic
     - gocyclo
     - gosec
@@ -32,7 +31,7 @@ linters:
     - perfsprint
     - prealloc
     - revive
-    - staticcheck
+    - stylecheck
     - unconvert
     - unused
     - usestdlibvars
@@ -51,7 +50,3 @@ issues:
     - EXC0012
     # don't suppress missing package level comment
     - EXC0015
-
-formatters:
-  enable:
-    - goimports
