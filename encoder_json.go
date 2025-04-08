@@ -1,27 +1,30 @@
 package blip
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"time"
 )
 
 type JSONEncoder struct {
-	Time       bool
-	TimeFormat string
-	KeyTime    string
-	KeyLevel   string
-	KeyMsg     string
+	Time           bool
+	TimeFormat     string
+	Base64Encoding *base64.Encoding
+	KeyTime        string
+	KeyLevel       string
+	KeyMsg         string
 }
 
 var _ Encoder = (*JSONEncoder)(nil)
 
 func NewJSONEncoder(cfg Config) JSONEncoder {
 	return JSONEncoder{
-		Time:       cfg.Time,
-		TimeFormat: cfg.TimeFormat,
-		KeyTime:    "ts",
-		KeyLevel:   "lvl",
-		KeyMsg:     "msg",
+		Time:           cfg.Time,
+		TimeFormat:     cfg.TimeFormat,
+		Base64Encoding: base64.StdEncoding,
+		KeyTime:        "ts",
+		KeyLevel:       "lvl",
+		KeyMsg:         "msg",
 	}
 }
 
@@ -81,7 +84,7 @@ func (e JSONEncoder) writeAny(buf *Buffer, val any) {
 	case string:
 		buf.WriteEscapedString(v)
 	case []byte:
-		buf.WriteBase64(v)
+		buf.WriteBase64(e.Base64Encoding, v)
 	case nil:
 		buf.WriteString("null")
 	case bool:
@@ -112,7 +115,7 @@ func (e JSONEncoder) writeAny(buf *Buffer, val any) {
 		buf.WriteFloat(v, 64)
 	case time.Duration:
 		buf.WriteBytes('"')
-		buf.WriteDuration(v.Truncate(DurationPrecision))
+		buf.WriteDuration(v.Truncate(DurationFieldPrecision))
 		buf.WriteBytes('"')
 	case time.Time:
 		buf.WriteBytes('"')

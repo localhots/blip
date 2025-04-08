@@ -1,4 +1,7 @@
-.PHONY: test bench pprof
+.PHONY: lint test bench fuzz pprof
+
+lint:
+	golangci-lint run
 
 test:
 	go test -v .

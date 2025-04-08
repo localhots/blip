@@ -11,6 +11,7 @@ import (
 	"time"
 )
 
+// Logger is a the main structure used to log messages.
 type Logger struct {
 	cfg       Config
 	enc       Encoder
@@ -18,6 +19,7 @@ type Logger struct {
 	lock      sync.Mutex
 }
 
+// Config is the configuration structure for the logger.
 type Config struct {
 	Level           Level
 	Output          io.Writer
@@ -32,6 +34,7 @@ type Config struct {
 	StackTraceSkip  int
 }
 
+// Level is the log level type.
 type Level int
 
 const (
@@ -45,29 +48,22 @@ const (
 	LevelFatal
 )
 
-const (
-	colorRed      = "\033[31m"
-	colorGreen    = "\033[32m"
-	colorYellow   = "\033[33m"
-	colorBlue     = "\033[34m"
-	colorPurple   = "\033[35m"
-	colorCyan     = "\033[36m"
-	colorOffWhite = "\033[37m"
-	colorRedBg    = "\033[48;5;88m"
-	colorWhite    = "\033[38;5;255m"
-	colorReset    = "\033[0m"
-)
-
 var (
 	defaultMessageWidth = 40 // characters
 	defaultTimeFormat   = "2006-01-02 15:04:05.000"
 
-	DurationPrecision = time.Millisecond
-	TimeFormat        = time.RFC3339
+	// DurationFieldPrecision controls how duration values are truncated when
+	// logged.
+	DurationFieldPrecision = time.Millisecond
+	// TimeFieldFormat controls the format used for time field values. Log entry
+	// timestamps are configured with the TimeFieldFormat field in the Config
+	// struct.
+	TimeFieldFormat = time.RFC3339
 
 	timeNow = time.Now
 )
 
+// New creates a new Logger instance with the given configuration.
 func New(cfg Config) *Logger {
 	// Set fallback values
 	if cfg.Level < LevelTrace || cfg.Level > LevelFatal {
@@ -98,6 +94,7 @@ func New(cfg Config) *Logger {
 	return l
 }
 
+// DefaultConfig returns a default configuration for the logger.
 func DefaultConfig() Config {
 	cfg := Config{
 		Level:           LevelInfo,
@@ -115,42 +112,49 @@ func DefaultConfig() Config {
 	return cfg
 }
 
+// Trace is used to log a message at the Trace level.
 func (l *Logger) Trace(ctx context.Context, msg string, fields ...F) {
 	if l.cfg.Level == LevelTrace {
 		l.print(LevelTrace, msg, makeFields(ctx, fields))
 	}
 }
 
+// Debug is used to log a message at the Debug level.
 func (l *Logger) Debug(ctx context.Context, msg string, fields ...F) {
 	if l.cfg.Level <= LevelDebug {
 		l.print(LevelDebug, msg, makeFields(ctx, fields))
 	}
 }
 
+// Info is used to log a message at the Info level.
 func (l *Logger) Info(ctx context.Context, msg string, fields ...F) {
 	if l.cfg.Level <= LevelInfo {
 		l.print(LevelInfo, msg, makeFields(ctx, fields))
 	}
 }
 
+// Warn is used to log a message at the Warn level.
 func (l *Logger) Warn(ctx context.Context, msg string, fields ...F) {
 	if l.cfg.Level <= LevelWarn {
 		l.print(LevelWarn, msg, makeFields(ctx, fields))
 	}
 }
 
+// Error is used to log a message at the Error level.
 func (l *Logger) Error(ctx context.Context, msg string, fields ...F) {
 	if l.cfg.Level <= LevelError {
 		l.print(LevelError, msg, makeFields(ctx, fields))
 	}
 }
 
+// Panic is used to log a message at the Panic level.
 func (l *Logger) Panic(ctx context.Context, msg string, fields ...F) {
 	if l.cfg.Level <= LevelPanic {
 		l.print(LevelPanic, msg, makeFields(ctx, fields))
 	}
 }
 
+// Fatal is used to log a message at the Fatal level and exit the program.
 func (l *Logger) Fatal(ctx context.Context, msg string, fields ...F) {
 	l.print(LevelFatal, msg, makeFields(ctx, fields))
 	os.Exit(1)

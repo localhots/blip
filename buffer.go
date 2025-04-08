@@ -22,6 +22,8 @@ const bufferSize = 1024
 // Encoding
 //
 
+// WriteAny writes a value of any type to the buffer. It handles various types
+// and falls back to fmt.Sprint for unsupported types.
 func (buf *Buffer) WriteAny(val any) {
 	switch v := val.(type) {
 	case string:
@@ -55,9 +57,9 @@ func (buf *Buffer) WriteAny(val any) {
 	case bool:
 		buf.WriteBool(v)
 	case time.Duration:
-		buf.WriteDuration(v.Truncate(DurationPrecision))
+		buf.WriteDuration(v.Truncate(DurationFieldPrecision))
 	case time.Time:
-		buf.WriteTime(v, TimeFormat)
+		buf.WriteTime(v, TimeFieldFormat)
 	default:
 		// TODO: Add support for custom encoders
 		buf.WriteString(fmt.Sprint(v))
@@ -80,10 +82,9 @@ func (buf *Buffer) WriteString(str string) {
 	buf.b = append(buf.b, str...)
 }
 
+// WriteRune writes a rune to the buffer. It encodes the rune as UTF-8.
 func (buf *Buffer) WriteRune(r rune) {
-	var tmp [utf8.UTFMax]byte
-	n := utf8.EncodeRune(tmp[:], r)
-	buf.b = append(buf.b, tmp[:n]...)
+	buf.b = utf8.AppendRune(buf.b, r)
 }
 
 // WriteInt writes an int64 value to the buffer.
@@ -116,9 +117,11 @@ func (buf *Buffer) WriteTime(t time.Time, format string) {
 	buf.b = t.AppendFormat(buf.b, format)
 }
 
-func (buf *Buffer) WriteEscapedString(s string) {
+// WriteEscapedString writes a string to the buffer, escaping special characters
+// as needed. It handles both ASCII and Unicode characters. The string is
+// enclosed in double quotes.
+func (buf *Buffer) WriteEscapedString(str string) {
 	buf.WriteBytes('"')
-
 	// last is the last index of the string that has been written to the buffer.
 	// cur is the current index of the string being processed.
 	//
@@ -126,38 +129,36 @@ func (buf *Buffer) WriteEscapedString(s string) {
 	// Check for ASCII characters first and then for other characters outside of
 	// the ASCII printable range. Write to the buffer as we go.
 	last := 0
-	for cur := 0; cur < len(s); {
-		b := s[cur]
-
-		// ASCII needing escape
-		if b < 0x20 || b == '"' || b == '\\' {
+	for cur := 0; cur < len(str); {
+		b := str[cur]
+		if b < 0x20 || b == '"' || b == '\\' || b >= 0x80 {
+			// Write unescaped segment
 			if last < cur {
-				buf.WriteString(s[last:cur])
+				buf.WriteString(str[last:cur])
 			}
-			buf.writeEscapedASCII(b)
+			if b >= 0x80 {
+				size := buf.writeEscapedUTF8(str[cur:])
+				cur += size
+			} else {
+				buf.writeEscapedASCII(b)
+				cur++
+			}
+			last = cur
+		} else {
 			cur++
-			last = cur
-			continue
 		}
-
-		// Probably not ASCII
-		if b >= 0x80 {
-			if last < cur {
-				buf.WriteString(s[last:cur])
-			}
-			size := buf.writeEscapedUTF8(s, cur)
-			cur += size
-			last = cur
-			continue
-		}
-
-		cur++
 	}
 	// Flush remaining characters that don't need escaping
-	if last < len(s) {
-		buf.WriteString(s[last:])
+	if last < len(str) {
+		buf.WriteString(str[last:])
 	}
+	buf.WriteBytes('"')
+}
 
+// WriteBase64 writes a byte slice to the buffer as a base64-encoded string.
+func (buf *Buffer) WriteBase64(b64enc *base64.Encoding, data []byte) {
+	buf.WriteBytes('"')
+	buf.b = b64enc.AppendEncode(buf.b, data)
 	buf.WriteBytes('"')
 }
 
@@ -180,23 +181,16 @@ func (buf *Buffer) writeEscapedASCII(b byte) {
 	}
 }
 
-func (buf *Buffer) writeEscapedUTF8(s string, i int) int {
-	r, size := utf8.DecodeRuneInString(s[i:])
+func (buf *Buffer) writeEscapedUTF8(str string) int {
+	r, size := utf8.DecodeRuneInString(str)
 	if r == utf8.RuneError && size == 1 {
-		// \uFFFD is the replacement character for invalid UTF-8 sequences.
+		// \uFFFD is the replacement character for invalid UTF-8 sequences (�).
 		// It looks like a diamond with a question mark inside.
 		buf.WriteBytes('\\', 'u', 'f', 'f', 'f', 'd')
 		return 1
 	}
 	buf.WriteRune(r)
 	return size
-}
-
-func (buf *Buffer) WriteBase64(data []byte) {
-	buf.WriteBytes('"')
-	// TODO: Make encoding configurable
-	buf.b = base64.StdEncoding.AppendEncode(buf.b, data)
-	buf.WriteBytes('"')
 }
 
 //
@@ -212,11 +206,11 @@ var bufferPool = sync.Pool{
 }
 
 func getBuffer() *Buffer {
-	s, _ := bufferPool.Get().(*Buffer)
-	s.b = s.b[:0] // Reset the underlying slice
-	return s
+	buf, _ := bufferPool.Get().(*Buffer)
+	return buf
 }
 
 func putBuffer(buf *Buffer) {
+	buf.b = buf.b[:0] // Reset the underlying slice
 	bufferPool.Put(buf)
 }

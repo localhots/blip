@@ -1,5 +1,7 @@
 package blip
 
+// ConsoleEncoder is a console encoder that formats log messages in a
+// human-readable format.
 type ConsoleEncoder struct {
 	TimeFormat      string
 	MinMessageWidth int
@@ -7,8 +9,25 @@ type ConsoleEncoder struct {
 	Color           bool
 }
 
+const (
+	colorRed      = "\033[31m"
+	colorGreen    = "\033[32m"
+	colorYellow   = "\033[33m"
+	colorBlue     = "\033[34m"
+	colorPurple   = "\033[35m"
+	colorCyan     = "\033[36m"
+	colorOffWhite = "\033[37m"
+	colorRedBg    = "\033[48;5;88m"
+	colorWhite    = "\033[38;5;255m"
+	colorReset    = "\033[0m"
+)
+
 var _ Encoder = (*ConsoleEncoder)(nil)
 
+// NewConsoleEncoder creates a new console encoder with the given configuration.
+// The encoder formats log messages in a human-readable format, with
+// colorized levels and optional field sorting.
+// The encoder also supports a minimum message width for padding.
 func NewConsoleEncoder(cfg Config) ConsoleEncoder {
 	return ConsoleEncoder{
 		TimeFormat:      cfg.TimeFormat,
