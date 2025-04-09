@@ -1,11 +1,7 @@
-run:
-  timeout: 30s
-
+version: "2"
 output:
-  sort-results: true
   sort-order:
     - file
-
 linters:
   enable:
     - bodyclose
@@ -20,7 +16,6 @@ linters:
     - errname
     - errorlint
     - goconst
-    - goimports
     - gocritic
     - gocyclo
     - gosec
@@ -31,22 +26,32 @@ linters:
     - perfsprint
     - prealloc
     - revive
-    - stylecheck
+    - staticcheck
     - unconvert
-    - unused
     - usestdlibvars
     - wastedassign
     - whitespace
-
-linters-settings:
-  gocyclo:
-    min-complexity: 12
-  nestif:
-    min-complexity: 6
-
-issues:
-  include:
-    # don't suppress missing exported method/function parameters
-    - EXC0012
-    # don't suppress missing package level comment
-    - EXC0015
+  settings:
+    gocyclo:
+      min-complexity: 12
+    nestif:
+      min-complexity: 6
+  exclusions:
+    generated: lax
+    presets:
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
