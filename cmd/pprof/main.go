@@ -1,3 +1,4 @@
+// Package main enables CPU profiling and logs 10M entries.
 package main
 
 import (
@@ -19,7 +20,9 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		pprof.StartCPUProfile(f)
+		if err := pprof.StartCPUProfile(f); err != nil {
+			panic(err)
+		}
 		defer pprof.StopCPUProfile()
 	}
 

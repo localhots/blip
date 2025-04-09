@@ -1,3 +1,8 @@
+// Package blip provides a simple and efficient logging library. It is designed
+// to be easy to use and flexible, allowing to customize the logging output
+// format, level, and other settings.
+// It supports JSON and console output formats and provides an inteface for
+// custom encoders.
 package blip
 
 import (
@@ -37,9 +42,9 @@ type Config struct {
 // Level is the log level type.
 type Level int
 
+// Supported log levels.
 const (
-	levelInvalid Level = iota
-	LevelTrace
+	LevelTrace Level = iota + 1
 	LevelDebug
 	LevelInfo
 	LevelWarn
@@ -178,11 +183,11 @@ func (l *Logger) print(lev Level, msg string, fields *[]Field) {
 		putFields(fields)
 	}
 	if lev >= l.cfg.StackTraceLevel {
-		l.enc.EncodeStackTrace(buf, lev, l.cfg.StackTraceSkip)
+		l.enc.EncodeStackTrace(buf, l.cfg.StackTraceSkip)
 	}
 
 	l.lock.Lock()
-	l.cfg.Output.Write(buf.b)
+	_, _ = l.cfg.Output.Write(buf.b)
 	l.lock.Unlock()
 }
 
@@ -235,4 +240,19 @@ func stackTrace(skip int) string {
 		}
 	}
 	return buf.String()
+}
+
+func timeCache(format string, precision time.Duration) func(time.Time) string {
+	var lastTime time.Time
+	var lastTimeStr string
+
+	return func(t time.Time) string {
+		if !lastTime.IsZero() && t.Sub(lastTime) < precision {
+			return lastTimeStr
+		}
+
+		lastTime = t
+		lastTimeStr = t.Format(format)
+		return lastTimeStr
+	}
 }
