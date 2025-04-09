@@ -6,6 +6,7 @@ import (
 	"time"
 )
 
+// JSONEncoder is an encoder that encodes log messages in JSON format.
 type JSONEncoder struct {
 	Time           bool
 	TimeFormat     string
@@ -17,6 +18,8 @@ type JSONEncoder struct {
 
 var _ Encoder = (*JSONEncoder)(nil)
 
+// NewJSONEncoder creates a new JSON encoder with the given configuration.
+// The encoder formats log messages in JSON format, with optional and fields.
 func NewJSONEncoder(cfg Config) JSONEncoder {
 	return JSONEncoder{
 		Time:           cfg.Time,
@@ -28,12 +31,14 @@ func NewJSONEncoder(cfg Config) JSONEncoder {
 	}
 }
 
+// EncodeTime encodes the time of the log message.
 func (e JSONEncoder) EncodeTime(buf *Buffer, ts string) {
 	buf.WriteBytes('{')
 	e.writeSafeField(buf, e.KeyTime, ts)
 	buf.WriteBytes(',')
 }
 
+// EncodeLevel encodes the log level of the message.
 func (e JSONEncoder) EncodeLevel(buf *Buffer, lev Level) {
 	if !e.Time {
 		buf.WriteBytes('{')
@@ -42,6 +47,7 @@ func (e JSONEncoder) EncodeLevel(buf *Buffer, lev Level) {
 	buf.WriteBytes(',')
 }
 
+// EncodeMessage encodes the log message.
 func (e JSONEncoder) EncodeMessage(buf *Buffer, msg string) {
 	buf.WriteBytes('"')
 	buf.WriteString(e.KeyMsg)
@@ -49,7 +55,8 @@ func (e JSONEncoder) EncodeMessage(buf *Buffer, msg string) {
 	buf.WriteEscapedString(msg)
 }
 
-func (e JSONEncoder) EncodeFields(buf *Buffer, lev Level, fields *[]Field) {
+// EncodeFields encodes the fields of the log message.
+func (e JSONEncoder) EncodeFields(buf *Buffer, _ Level, fields *[]Field) {
 	defer buf.WriteBytes('}', '\n')
 	if fields == nil || len(*fields) == 0 {
 		return
@@ -63,7 +70,8 @@ func (e JSONEncoder) EncodeFields(buf *Buffer, lev Level, fields *[]Field) {
 	}
 }
 
-func (e JSONEncoder) EncodeStackTrace(buf *Buffer, lev Level, skip int) {
+// EncodeStackTrace encodes the stack trace of the log message.
+func (e JSONEncoder) EncodeStackTrace(buf *Buffer, skip int) {
 	// Print stack trace but skip the first 4 frames which are part of the
 	// logger itself.
 	buf.WriteString(stackTrace(skip))
@@ -79,6 +87,7 @@ func (e JSONEncoder) writeSafeField(buf *Buffer, key, val string) {
 	buf.WriteBytes('"')
 }
 
+// nolint:gocyclo
 func (e JSONEncoder) writeAny(buf *Buffer, val any) {
 	switch v := val.(type) {
 	case string:
@@ -122,9 +131,7 @@ func (e JSONEncoder) writeAny(buf *Buffer, val any) {
 		buf.WriteTime(v, e.TimeFormat)
 		buf.WriteBytes('"')
 	default:
-		if err := json.NewEncoder(buf).Encode(v); err != nil {
-			// FIXME
-			panic(err)
-		}
+		//nolint:errchkjson
+		_ = json.NewEncoder(buf).Encode(v)
 	}
 }
