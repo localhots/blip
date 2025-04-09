@@ -37,16 +37,19 @@ func NewConsoleEncoder(cfg Config) ConsoleEncoder {
 	}
 }
 
+// EncodeTime encodes the time of the log message.
 func (e ConsoleEncoder) EncodeTime(buf *Buffer, ts string) {
 	buf.WriteString(ts)
 	buf.WriteBytes(' ')
 }
 
+// EncodeLevel encodes the log level of the message.
 func (e ConsoleEncoder) EncodeLevel(buf *Buffer, lev Level) {
 	e.writeColorized(buf, lev, lev.String())
 	buf.WriteBytes(' ')
 }
 
+// EncodeMessage encodes the log message.
 func (e ConsoleEncoder) EncodeMessage(buf *Buffer, msg string) {
 	buf.WriteString(msg)
 	if e.MinMessageWidth == 0 {
@@ -66,6 +69,7 @@ func (e ConsoleEncoder) EncodeMessage(buf *Buffer, msg string) {
 	}
 }
 
+// EncodeFields encodes the fields of the log message.
 func (e ConsoleEncoder) EncodeFields(buf *Buffer, lev Level, fields *[]Field) {
 	defer buf.WriteBytes('\n')
 	if fields == nil || len(*fields) == 0 {
@@ -87,7 +91,8 @@ func (e ConsoleEncoder) EncodeFields(buf *Buffer, lev Level, fields *[]Field) {
 	}
 }
 
-func (e ConsoleEncoder) EncodeStackTrace(buf *Buffer, lev Level, skip int) {
+// EncodeStackTrace encodes the stack trace of the log message.
+func (e ConsoleEncoder) EncodeStackTrace(buf *Buffer, skip int) {
 	// Print stack trace but skip the first 4 frames which are part of the
 	// logger itself.
 	buf.WriteString(stackTrace(skip))

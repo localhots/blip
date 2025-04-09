@@ -11,5 +11,5 @@ type Encoder interface {
 	// EncodeFields encodes the fields of the log message.
 	EncodeFields(buf *Buffer, lev Level, fields *[]Field)
 	// EncodeStackTrace encodes the stack trace of the log message.
-	EncodeStackTrace(buf *Buffer, lev Level, skip int)
+	EncodeStackTrace(buf *Buffer, skip int)
 }

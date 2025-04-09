@@ -24,6 +24,8 @@ const bufferSize = 1024
 
 // WriteAny writes a value of any type to the buffer. It handles various types
 // and falls back to fmt.Sprint for unsupported types.
+//
+//nolint:gocyclo
 func (buf *Buffer) WriteAny(val any) {
 	switch v := val.(type) {
 	case string:
