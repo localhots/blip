@@ -15,16 +15,20 @@ func main() {
 	cfg := blip.DefaultConfig()
 	cfg.Level = blip.LevelDebug
 	flag.BoolVar(&cfg.Time, "time", cfg.Time, "Log timestamps")
-	flag.BoolVar(&cfg.Color, "color", cfg.Color, "Colorized output")
-	flag.BoolVar(&cfg.SortFields, "sort", cfg.SortFields, "Sort fields")
-	flag.IntVar(&cfg.MinMessageWidth, "width", cfg.MinMessageWidth, "Min message width")
+	color := flag.Bool("color", true, "Colorized output")
+	sort := flag.Bool("sort", true, "Sort fields")
+	width := flag.Int("width", 40, "Min message width")
 	encoder := flag.String("enc", "console", "Log encoder (json, console)")
 	flag.Parse()
 	switch *encoder {
 	case "json":
-		cfg.Encoder = blip.NewJSONEncoder(cfg)
+		cfg.Encoder = blip.NewJSONEncoder()
 	case "console":
-		cfg.Encoder = blip.NewConsoleEncoder(cfg)
+		cfg.Encoder = blip.ConsoleEncoder{
+			Color:           *color,
+			SortFields:      *sort,
+			MinMessageWidth: *width,
+		}
 	default:
 		panic("invalid encoder")
 	}

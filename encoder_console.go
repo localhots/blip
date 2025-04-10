@@ -1,8 +1,14 @@
 package blip
 
+import (
+	"fmt"
+	"time"
+)
+
 // ConsoleEncoder is a console encoder that formats log messages in a
 // human-readable format.
 type ConsoleEncoder struct {
+	Time            bool
 	TimeFormat      string
 	MinMessageWidth int
 	SortFields      bool
@@ -28,17 +34,21 @@ var _ Encoder = (*ConsoleEncoder)(nil)
 // The encoder formats log messages in a human-readable format, with
 // colorized levels and optional field sorting.
 // The encoder also supports a minimum message width for padding.
-func NewConsoleEncoder(cfg Config) ConsoleEncoder {
+func NewConsoleEncoder() ConsoleEncoder {
 	return ConsoleEncoder{
-		TimeFormat:      cfg.TimeFormat,
-		MinMessageWidth: cfg.MinMessageWidth,
-		SortFields:      cfg.SortFields,
-		Color:           cfg.Color,
+		Time:            true,
+		TimeFormat:      defaultTimeFormat,
+		MinMessageWidth: defaultMessageWidth,
+		SortFields:      true,
+		Color:           true,
 	}
 }
 
 // EncodeTime encodes the time of the log message.
 func (e ConsoleEncoder) EncodeTime(buf *Buffer, ts string) {
+	if !e.Time {
+		return
+	}
 	buf.WriteString(ts)
 	buf.WriteBytes(' ')
 }
@@ -87,7 +97,7 @@ func (e ConsoleEncoder) EncodeFields(buf *Buffer, lev Level, fields *[]Field) {
 		}
 		e.writeColorized(buf, lev, f.Key)
 		buf.WriteBytes('=')
-		buf.WriteAny(f.Value)
+		e.writeAny(buf, f.Value)
 	}
 }
 
@@ -97,6 +107,52 @@ func (e ConsoleEncoder) EncodeStackTrace(buf *Buffer, skip int) {
 	// logger itself.
 	buf.WriteString(stackTrace(skip))
 	buf.WriteBytes('\n')
+}
+
+// WriteAny writes a value of any type to the buffer. It handles various types
+// and falls back to fmt.Sprint for unsupported types.
+//
+//nolint:gocyclo
+func (e ConsoleEncoder) writeAny(buf *Buffer, val any) {
+	switch v := val.(type) {
+	case string:
+		buf.WriteString(v)
+	case []byte:
+		buf.WriteBytes(v...)
+	case int:
+		buf.WriteInt(int64(v))
+	case int8:
+		buf.WriteInt(int64(v))
+	case int16:
+		buf.WriteInt(int64(v))
+	case int32:
+		buf.WriteInt(int64(v))
+	case int64:
+		buf.WriteInt(v)
+	case uint:
+		buf.WriteUint(uint64(v))
+	case uint8:
+		buf.WriteUint(uint64(v))
+	case uint16:
+		buf.WriteUint(uint64(v))
+	case uint32:
+		buf.WriteUint(uint64(v))
+	case uint64:
+		buf.WriteUint(v)
+	case float32:
+		buf.WriteFloat(float64(v), 32)
+	case float64:
+		buf.WriteFloat(v, 64)
+	case bool:
+		buf.WriteBool(v)
+	case time.Duration:
+		buf.WriteDuration(v.Truncate(DurationFieldPrecision))
+	case time.Time:
+		buf.WriteTime(v, TimeFieldFormat)
+	default:
+		// TODO: Add support for custom encoders
+		buf.WriteString(fmt.Sprint(v))
+	}
 }
 
 func (e ConsoleEncoder) writeColorized(buf *Buffer, lev Level, str string) {

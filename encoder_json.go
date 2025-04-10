@@ -8,7 +8,6 @@ import (
 
 // JSONEncoder is an encoder that encodes log messages in JSON format.
 type JSONEncoder struct {
-	Time           bool
 	TimeFormat     string
 	Base64Encoding *base64.Encoding
 	KeyTime        string
@@ -20,10 +19,9 @@ var _ Encoder = (*JSONEncoder)(nil)
 
 // NewJSONEncoder creates a new JSON encoder with the given configuration.
 // The encoder formats log messages in JSON format, with optional and fields.
-func NewJSONEncoder(cfg Config) JSONEncoder {
+func NewJSONEncoder() JSONEncoder {
 	return JSONEncoder{
-		Time:           cfg.Time,
-		TimeFormat:     cfg.TimeFormat,
+		TimeFormat:     defaultTimeFormat,
 		Base64Encoding: base64.StdEncoding,
 		KeyTime:        "ts",
 		KeyLevel:       "lvl",
@@ -33,6 +31,9 @@ func NewJSONEncoder(cfg Config) JSONEncoder {
 
 // EncodeTime encodes the time of the log message.
 func (e JSONEncoder) EncodeTime(buf *Buffer, ts string) {
+	if e.TimeFormat == "" {
+		return
+	}
 	buf.WriteBytes('{')
 	e.writeSafeField(buf, e.KeyTime, ts)
 	buf.WriteBytes(',')
@@ -76,6 +77,14 @@ func (e JSONEncoder) EncodeStackTrace(buf *Buffer, skip int) {
 	// logger itself.
 	buf.WriteString(stackTrace(skip))
 	buf.WriteBytes('\n')
+}
+
+// TimeFormat returns the time format used by the encoder.
+func (e JSONEncoder) TimeFormat() string {
+	if e.Time {
+		return TimeFieldFormat
+	}
+	return ""
 }
 
 // writeSafeField writes a field to the buffer not worrying about escaping it.
@@ -128,7 +137,7 @@ func (e JSONEncoder) writeAny(buf *Buffer, val any) {
 		buf.WriteBytes('"')
 	case time.Time:
 		buf.WriteBytes('"')
-		buf.WriteTime(v, e.TimeFormat)
+		buf.WriteTime(v, TimeFieldFormat)
 		buf.WriteBytes('"')
 	default:
 		//nolint:errchkjson

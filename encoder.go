@@ -12,4 +12,7 @@ type Encoder interface {
 	EncodeFields(buf *Buffer, lev Level, fields *[]Field)
 	// EncodeStackTrace encodes the stack trace of the log message.
 	EncodeStackTrace(buf *Buffer, skip int)
+
+	// TimeFormat returns the time format used by the encoder.
+	TimeFormat() string
 }

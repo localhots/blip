@@ -29,12 +29,7 @@ type Config struct {
 	Level           Level
 	Output          io.Writer
 	Encoder         Encoder
-	Time            bool
-	TimeFormat      string
 	TimePrecision   time.Duration
-	Color           bool
-	MinMessageWidth int
-	SortFields      bool
 	StackTraceLevel Level
 	StackTraceSkip  int
 }
@@ -81,15 +76,11 @@ func New(cfg Config) *Logger {
 		// Assume empty time format is the default one, not disabled
 		cfg.TimeFormat = defaultTimeFormat
 	}
-	if cfg.MinMessageWidth < 0 {
-		// Consider negative message width as no padding
-		cfg.MinMessageWidth = 0
-	}
 	if cfg.StackTraceLevel < LevelTrace || cfg.StackTraceLevel > LevelFatal {
 		cfg.StackTraceLevel = LevelError
 	}
 	if cfg.Encoder == nil {
-		cfg.Encoder = NewConsoleEncoder(cfg)
+		cfg.Encoder = NewConsoleEncoder()
 	}
 
 	l := &Logger{cfg: cfg, enc: cfg.Encoder}
@@ -101,20 +92,14 @@ func New(cfg Config) *Logger {
 
 // DefaultConfig returns a default configuration for the logger.
 func DefaultConfig() Config {
-	cfg := Config{
+	return Config{
 		Level:           LevelInfo,
 		Output:          os.Stderr,
-		Time:            true,
-		TimeFormat:      defaultTimeFormat,
 		TimePrecision:   0, // Disable time cache
-		Color:           true,
-		MinMessageWidth: defaultMessageWidth,
-		SortFields:      true,
 		StackTraceLevel: LevelError,
 		StackTraceSkip:  4,
+		Encoder:         NewConsoleEncoder(),
 	}
-	cfg.Encoder = NewConsoleEncoder(cfg)
-	return cfg
 }
 
 // Trace is used to log a message at the Trace level.
