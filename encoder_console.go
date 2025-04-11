@@ -25,7 +25,8 @@ const (
 	colorOffWhite = "\033[37m"
 	colorRedBg    = "\033[48;5;88m"
 	colorWhite    = "\033[38;5;255m"
-	colorReset    = "\033[0m"
+	fontBold      = "\033[1m"
+	fontReset     = "\033[0m"
 )
 
 var _ Encoder = (*ConsoleEncoder)(nil)
@@ -61,7 +62,13 @@ func (e ConsoleEncoder) EncodeLevel(buf *Buffer, lev Level) {
 
 // EncodeMessage encodes the log message.
 func (e ConsoleEncoder) EncodeMessage(buf *Buffer, msg string) {
+	if e.Color {
+		buf.WriteString(fontBold)
+	}
 	buf.WriteString(msg)
+	if e.Color {
+		buf.WriteString(fontReset)
+	}
 	if e.MinMessageWidth == 0 {
 		return
 	}
@@ -175,5 +182,5 @@ func (e ConsoleEncoder) writeColorized(buf *Buffer, lev Level, str string) {
 		buf.WriteString(colorWhite)
 	}
 	buf.WriteString(str)
-	buf.WriteString(colorReset)
+	buf.WriteString(fontReset)
 }
