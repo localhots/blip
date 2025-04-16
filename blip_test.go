@@ -95,6 +95,7 @@ func BenchmarkBare(b *testing.B) {
 		Level:           blip.LevelDebug,
 		Output:          io.Discard,
 		StackTraceLevel: blip.LevelError,
+		Encoder:         &blip.ConsoleEncoder{},
 	})
 	ctx := context.Background()
 
@@ -111,12 +112,11 @@ func BenchmarkBare(b *testing.B) {
 
 func BenchmarkOptimized(b *testing.B) {
 	log.Setup(blip.Config{
-		Level:         blip.LevelDebug,
-		Output:        io.Discard,
-		Time:          true,
-		TimeFormat:    "2006-01-02 15:04:05.000",
-		TimePrecision: 1 * time.Millisecond,
-		Encoder: blip.ConsoleEncoder{
+		Level:  blip.LevelDebug,
+		Output: io.Discard,
+		Encoder: &blip.ConsoleEncoder{
+			TimeFormat:      "2006-01-02 15:04:05.000",
+			TimePrecision:   1 * time.Millisecond,
 			Color:           false,
 			MinMessageWidth: 0,
 			SortFields:      false,
@@ -138,12 +138,11 @@ func BenchmarkOptimized(b *testing.B) {
 
 func BenchmarkPretty(b *testing.B) {
 	log.Setup(blip.Config{
-		Level:         blip.LevelDebug,
-		Output:        io.Discard,
-		Time:          true,
-		TimeFormat:    "2006-01-02 15:04:05.000",
-		TimePrecision: 1 * time.Millisecond,
-		Encoder: blip.ConsoleEncoder{
+		Level:  blip.LevelDebug,
+		Output: io.Discard,
+		Encoder: &blip.ConsoleEncoder{
+			TimeFormat:      "2006-01-02 15:04:05.000",
+			TimePrecision:   1 * time.Millisecond,
 			Color:           true,
 			MinMessageWidth: 40,
 			SortFields:      false,
@@ -165,12 +164,11 @@ func BenchmarkPretty(b *testing.B) {
 
 func BenchmarkPrettySorted(b *testing.B) {
 	log.Setup(blip.Config{
-		Level:         blip.LevelDebug,
-		Output:        io.Discard,
-		Time:          true,
-		TimeFormat:    "2006-01-02 15:04:05.000",
-		TimePrecision: 1 * time.Millisecond,
-		Encoder: blip.ConsoleEncoder{
+		Level:  blip.LevelDebug,
+		Output: io.Discard,
+		Encoder: &blip.ConsoleEncoder{
+			TimeFormat:      "2006-01-02 15:04:05.000",
+			TimePrecision:   1 * time.Millisecond,
 			Color:           true,
 			MinMessageWidth: 40,
 			SortFields:      true,
@@ -192,12 +190,11 @@ func BenchmarkPrettySorted(b *testing.B) {
 
 func BenchmarkPrettySortedContext(b *testing.B) {
 	log.Setup(blip.Config{
-		Level:         blip.LevelDebug,
-		Output:        io.Discard,
-		Time:          true,
-		TimeFormat:    "2006-01-02 15:04:05.000",
-		TimePrecision: 1 * time.Millisecond,
-		Encoder: blip.ConsoleEncoder{
+		Level:  blip.LevelDebug,
+		Output: io.Discard,
+		Encoder: &blip.ConsoleEncoder{
+			TimeFormat:      "2006-01-02 15:04:05.000",
+			TimePrecision:   1 * time.Millisecond,
 			Color:           true,
 			MinMessageWidth: 40,
 			SortFields:      true,

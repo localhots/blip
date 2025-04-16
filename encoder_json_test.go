@@ -45,7 +45,7 @@ func TestJSONEncoderNoFieldsNoTime(t *testing.T) {
 	cfg.Level = LevelDebug
 
 	enc := NewJSONEncoder()
-	enc.Time = false
+	enc.TimeFormat = ""
 	cfg.Encoder = enc
 
 	logger := New(cfg)

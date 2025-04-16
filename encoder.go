@@ -1,9 +1,13 @@
 package blip
 
+import (
+	"time"
+)
+
 // Encoder is an interface for encoding log messages.
 type Encoder interface {
 	// EncodeTime encodes the time of the log message.
-	EncodeTime(buf *Buffer, ts string)
+	EncodeTime(buf *Buffer, t time.Time)
 	// EncodeLevel encodes the log level of the message.
 	EncodeLevel(buf *Buffer, lev Level)
 	// EncodeMessage encodes the log message.
@@ -12,7 +16,4 @@ type Encoder interface {
 	EncodeFields(buf *Buffer, lev Level, fields *[]Field)
 	// EncodeStackTrace encodes the stack trace of the log message.
 	EncodeStackTrace(buf *Buffer, skip int)
-
-	// TimeFormat returns the time format used by the encoder.
-	TimeFormat() string
 }
