@@ -19,7 +19,7 @@ import (
 
 func FuzzBlip(f *testing.F) {
 	cfg := blip.DefaultConfig()
-	cfg.Encoder = blip.NewJSONEncoder(cfg)
+	cfg.Encoder = blip.NewJSONEncoder()
 	ctx := context.Background()
 
 	// Seed inputs
@@ -75,7 +75,7 @@ func BenchmarkJSON(b *testing.B) {
 		Level:           blip.LevelDebug,
 		Output:          io.Discard,
 		StackTraceLevel: blip.LevelError,
-		Encoder:         blip.NewJSONEncoder(blip.DefaultConfig()),
+		Encoder:         blip.NewJSONEncoder(),
 	})
 	ctx := context.Background()
 
@@ -95,6 +95,7 @@ func BenchmarkBare(b *testing.B) {
 		Level:           blip.LevelDebug,
 		Output:          io.Discard,
 		StackTraceLevel: blip.LevelError,
+		Encoder:         &blip.ConsoleEncoder{},
 	})
 	ctx := context.Background()
 
@@ -111,14 +112,15 @@ func BenchmarkBare(b *testing.B) {
 
 func BenchmarkOptimized(b *testing.B) {
 	log.Setup(blip.Config{
-		Level:           blip.LevelDebug,
-		Output:          io.Discard,
-		Time:            true,
-		TimeFormat:      "2006-01-02 15:04:05.000",
-		TimePrecision:   1 * time.Millisecond,
-		Color:           false,
-		MinMessageWidth: 0,
-		SortFields:      false,
+		Level:  blip.LevelDebug,
+		Output: io.Discard,
+		Encoder: &blip.ConsoleEncoder{
+			TimeFormat:      "2006-01-02 15:04:05.000",
+			TimePrecision:   1 * time.Millisecond,
+			Color:           false,
+			MinMessageWidth: 0,
+			SortFields:      false,
+		},
 		StackTraceLevel: blip.LevelError,
 	})
 	ctx := context.Background()
@@ -136,14 +138,15 @@ func BenchmarkOptimized(b *testing.B) {
 
 func BenchmarkPretty(b *testing.B) {
 	log.Setup(blip.Config{
-		Level:           blip.LevelDebug,
-		Output:          io.Discard,
-		Time:            true,
-		TimeFormat:      "2006-01-02 15:04:05.000",
-		TimePrecision:   1 * time.Millisecond,
-		Color:           true,
-		MinMessageWidth: 40,
-		SortFields:      false,
+		Level:  blip.LevelDebug,
+		Output: io.Discard,
+		Encoder: &blip.ConsoleEncoder{
+			TimeFormat:      "2006-01-02 15:04:05.000",
+			TimePrecision:   1 * time.Millisecond,
+			Color:           true,
+			MinMessageWidth: 40,
+			SortFields:      false,
+		},
 		StackTraceLevel: blip.LevelError,
 	})
 	ctx := context.Background()
@@ -161,14 +164,15 @@ func BenchmarkPretty(b *testing.B) {
 
 func BenchmarkPrettySorted(b *testing.B) {
 	log.Setup(blip.Config{
-		Level:           blip.LevelDebug,
-		Output:          io.Discard,
-		Time:            true,
-		TimeFormat:      "2006-01-02 15:04:05.000",
-		TimePrecision:   1 * time.Millisecond,
-		Color:           true,
-		MinMessageWidth: 40,
-		SortFields:      true,
+		Level:  blip.LevelDebug,
+		Output: io.Discard,
+		Encoder: &blip.ConsoleEncoder{
+			TimeFormat:      "2006-01-02 15:04:05.000",
+			TimePrecision:   1 * time.Millisecond,
+			Color:           true,
+			MinMessageWidth: 40,
+			SortFields:      true,
+		},
 		StackTraceLevel: blip.LevelError,
 	})
 	ctx := context.Background()
@@ -186,14 +190,15 @@ func BenchmarkPrettySorted(b *testing.B) {
 
 func BenchmarkPrettySortedContext(b *testing.B) {
 	log.Setup(blip.Config{
-		Level:           blip.LevelDebug,
-		Output:          io.Discard,
-		Time:            true,
-		TimeFormat:      "2006-01-02 15:04:05.000",
-		TimePrecision:   1 * time.Millisecond,
-		Color:           true,
-		MinMessageWidth: 40,
-		SortFields:      true,
+		Level:  blip.LevelDebug,
+		Output: io.Discard,
+		Encoder: &blip.ConsoleEncoder{
+			TimeFormat:      "2006-01-02 15:04:05.000",
+			TimePrecision:   1 * time.Millisecond,
+			Color:           true,
+			MinMessageWidth: 40,
+			SortFields:      true,
+		},
 		StackTraceLevel: blip.LevelError,
 	})
 	ctx := context.Background()

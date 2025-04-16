@@ -18,10 +18,9 @@ import (
 
 // Logger is a the main structure used to log messages.
 type Logger struct {
-	cfg       Config
-	enc       Encoder
-	timeCache func(time.Time) string
-	lock      sync.Mutex
+	cfg  Config
+	enc  Encoder
+	lock sync.Mutex
 }
 
 // Config is the configuration structure for the logger.
@@ -29,12 +28,6 @@ type Config struct {
 	Level           Level
 	Output          io.Writer
 	Encoder         Encoder
-	Time            bool
-	TimeFormat      string
-	TimePrecision   time.Duration
-	Color           bool
-	MinMessageWidth int
-	SortFields      bool
 	StackTraceLevel Level
 	StackTraceSkip  int
 }
@@ -54,8 +47,9 @@ const (
 )
 
 var (
-	defaultMessageWidth = 40 // characters
-	defaultTimeFormat   = "2006-01-02 15:04:05.000"
+	defaultMessageWidth  = 40 // characters
+	defaultTimeFormat    = "2006-01-02 15:04:05.000"
+	defaultTimePrecision = 1 * time.Millisecond
 
 	// DurationFieldPrecision controls how duration values are truncated when
 	// logged.
@@ -77,44 +71,28 @@ func New(cfg Config) *Logger {
 	if cfg.Output == nil {
 		cfg.Output = os.Stderr
 	}
-	if cfg.TimeFormat == "" {
-		// Assume empty time format is the default one, not disabled
-		cfg.TimeFormat = defaultTimeFormat
-	}
-	if cfg.MinMessageWidth < 0 {
-		// Consider negative message width as no padding
-		cfg.MinMessageWidth = 0
-	}
 	if cfg.StackTraceLevel < LevelTrace || cfg.StackTraceLevel > LevelFatal {
 		cfg.StackTraceLevel = LevelError
 	}
 	if cfg.Encoder == nil {
-		cfg.Encoder = NewConsoleEncoder(cfg)
+		cfg.Encoder = NewConsoleEncoder()
 	}
 
-	l := &Logger{cfg: cfg, enc: cfg.Encoder}
-	if cfg.TimePrecision > 0 {
-		l.timeCache = timeCache(l.cfg.TimeFormat, l.cfg.TimePrecision)
+	return &Logger{
+		cfg: cfg,
+		enc: cfg.Encoder,
 	}
-	return l
 }
 
 // DefaultConfig returns a default configuration for the logger.
 func DefaultConfig() Config {
-	cfg := Config{
+	return Config{
 		Level:           LevelInfo,
 		Output:          os.Stderr,
-		Time:            true,
-		TimeFormat:      defaultTimeFormat,
-		TimePrecision:   0, // Disable time cache
-		Color:           true,
-		MinMessageWidth: defaultMessageWidth,
-		SortFields:      true,
 		StackTraceLevel: LevelError,
 		StackTraceSkip:  4,
+		Encoder:         NewConsoleEncoder(),
 	}
-	cfg.Encoder = NewConsoleEncoder(cfg)
-	return cfg
 }
 
 // Trace is used to log a message at the Trace level.
@@ -173,9 +151,7 @@ func (l *Logger) print(lev Level, msg string, fields *[]Field) {
 	buf := getBuffer()
 	defer putBuffer(buf)
 
-	if l.cfg.Time {
-		l.enc.EncodeTime(buf, l.timeString())
-	}
+	l.enc.EncodeTime(buf)
 	l.enc.EncodeLevel(buf, lev)
 	l.enc.EncodeMessage(buf, msg)
 	l.enc.EncodeFields(buf, lev, fields)
@@ -194,13 +170,6 @@ func (l *Logger) print(lev Level, msg string, fields *[]Field) {
 //
 // Helpers
 //
-
-func (l *Logger) timeString() string {
-	if l.timeCache != nil {
-		return l.timeCache(timeNow())
-	}
-	return timeNow().Format(l.cfg.TimeFormat)
-}
 
 // levelName returns level label that is consistently 4 characters long.
 func (lev Level) String() string {

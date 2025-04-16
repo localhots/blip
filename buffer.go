@@ -2,7 +2,6 @@ package blip
 
 import (
 	"encoding/base64"
-	"fmt"
 	"strconv"
 	"sync"
 	"time"
@@ -21,52 +20,6 @@ const bufferSize = 1024
 //
 // Encoding
 //
-
-// WriteAny writes a value of any type to the buffer. It handles various types
-// and falls back to fmt.Sprint for unsupported types.
-//
-//nolint:gocyclo
-func (buf *Buffer) WriteAny(val any) {
-	switch v := val.(type) {
-	case string:
-		buf.WriteString(v)
-	case []byte:
-		buf.WriteBytes(v...)
-	case int:
-		buf.WriteInt(int64(v))
-	case int8:
-		buf.WriteInt(int64(v))
-	case int16:
-		buf.WriteInt(int64(v))
-	case int32:
-		buf.WriteInt(int64(v))
-	case int64:
-		buf.WriteInt(v)
-	case uint:
-		buf.WriteUint(uint64(v))
-	case uint8:
-		buf.WriteUint(uint64(v))
-	case uint16:
-		buf.WriteUint(uint64(v))
-	case uint32:
-		buf.WriteUint(uint64(v))
-	case uint64:
-		buf.WriteUint(v)
-	case float32:
-		buf.WriteFloat(float64(v), 32)
-	case float64:
-		buf.WriteFloat(v, 64)
-	case bool:
-		buf.WriteBool(v)
-	case time.Duration:
-		buf.WriteDuration(v.Truncate(DurationFieldPrecision))
-	case time.Time:
-		buf.WriteTime(v, TimeFieldFormat)
-	default:
-		// TODO: Add support for custom encoders
-		buf.WriteString(fmt.Sprint(v))
-	}
-}
 
 // Write implements the io.Writer interface.
 func (buf *Buffer) Write(b []byte) (int, error) {
