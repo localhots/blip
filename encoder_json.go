@@ -34,20 +34,20 @@ func NewJSONEncoder() *JSONEncoder {
 }
 
 // EncodeTime encodes the time of the log message.
-func (e *JSONEncoder) EncodeTime(buf *Buffer, t time.Time) {
+func (e *JSONEncoder) EncodeTime(buf *Buffer) {
 	if e.TimeFormat == "" {
 		return
 	}
-	if e.TimePrecision > 0 && e.timeCache == nil {
+	if e.timeCache == nil && e.TimePrecision > 0 {
 		e.timeCache = timeCache(e.TimeFormat, e.TimePrecision)
 	}
 	buf.WriteBytes('{')
-	if e.timeCache == nil {
-		buf.WriteBytes('"')
-		buf.WriteTime(t, e.TimeFormat)
-		buf.WriteBytes('"')
+	if e.timeCache != nil {
+		e.writeSafeField(buf, e.KeyTime, e.timeCache(timeNow()))
 	} else {
-		e.writeSafeField(buf, e.KeyTime, e.timeCache(t))
+		buf.WriteBytes('"')
+		buf.WriteTime(timeNow(), e.TimeFormat)
+		buf.WriteBytes('"')
 	}
 	buf.WriteBytes(',')
 }

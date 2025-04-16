@@ -48,17 +48,17 @@ func NewConsoleEncoder() *ConsoleEncoder {
 }
 
 // EncodeTime encodes the time of the log message.
-func (e *ConsoleEncoder) EncodeTime(buf *Buffer, t time.Time) {
+func (e *ConsoleEncoder) EncodeTime(buf *Buffer) {
 	if e.TimeFormat == "" {
 		return
 	}
-	if e.TimePrecision > 0 && e.timeCache == nil {
+	if e.timeCache == nil && e.TimePrecision > 0 {
 		e.timeCache = timeCache(e.TimeFormat, e.TimePrecision)
 	}
-	if e.timeCache == nil {
-		buf.WriteTime(t, e.TimeFormat)
+	if e.timeCache != nil {
+		buf.WriteString(e.timeCache(timeNow()))
 	} else {
-		buf.WriteString(e.timeCache(t))
+		buf.WriteTime(timeNow(), e.TimeFormat)
 	}
 	buf.WriteBytes(' ')
 }

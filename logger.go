@@ -151,7 +151,7 @@ func (l *Logger) print(lev Level, msg string, fields *[]Field) {
 	buf := getBuffer()
 	defer putBuffer(buf)
 
-	l.enc.EncodeTime(buf, timeNow())
+	l.enc.EncodeTime(buf)
 	l.enc.EncodeLevel(buf, lev)
 	l.enc.EncodeMessage(buf, msg)
 	l.enc.EncodeFields(buf, lev, fields)
