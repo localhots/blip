@@ -14,6 +14,7 @@ type JSONEncoder struct {
 	KeyTime        string
 	KeyLevel       string
 	KeyMsg         string
+	KeyStackTrace  string
 
 	timeCache func(time.Time) string
 }
@@ -30,7 +31,13 @@ func NewJSONEncoder() *JSONEncoder {
 		KeyTime:        "ts",
 		KeyLevel:       "lvl",
 		KeyMsg:         "msg",
+		KeyStackTrace:  "stack",
 	}
+}
+
+// Start writes the beginning of the log message.
+func (e *JSONEncoder) Start(buf *Buffer) {
+	buf.WriteBytes('{')
 }
 
 // EncodeTime encodes the time of the log message.
@@ -41,7 +48,6 @@ func (e *JSONEncoder) EncodeTime(buf *Buffer) {
 	if e.timeCache == nil && e.TimePrecision > 0 {
 		e.timeCache = timeCache(e.TimeFormat, e.TimePrecision)
 	}
-	buf.WriteBytes('{')
 	if e.timeCache != nil {
 		e.writeSafeField(buf, e.KeyTime, e.timeCache(timeNow()))
 	} else {
@@ -49,21 +55,19 @@ func (e *JSONEncoder) EncodeTime(buf *Buffer) {
 		buf.WriteTime(timeNow(), e.TimeFormat)
 		buf.WriteBytes('"')
 	}
-	buf.WriteBytes(',')
 }
 
 // EncodeLevel encodes the log level of the message.
 func (e *JSONEncoder) EncodeLevel(buf *Buffer, lev Level) {
-	if e.TimeFormat == "" {
-		buf.WriteBytes('{')
+	if e.TimeFormat != "" {
+		buf.WriteBytes(',')
 	}
 	e.writeSafeField(buf, e.KeyLevel, lev.String())
-	buf.WriteBytes(',')
 }
 
 // EncodeMessage encodes the log message.
 func (e *JSONEncoder) EncodeMessage(buf *Buffer, msg string) {
-	buf.WriteBytes('"')
+	buf.WriteBytes(',', '"')
 	buf.WriteString(e.KeyMsg)
 	buf.WriteBytes('"', ':')
 	buf.WriteEscapedString(msg)
@@ -71,7 +75,6 @@ func (e *JSONEncoder) EncodeMessage(buf *Buffer, msg string) {
 
 // EncodeFields encodes the fields of the log message.
 func (e *JSONEncoder) EncodeFields(buf *Buffer, _ Level, fields *[]Field) {
-	defer buf.WriteBytes('}', '\n')
 	if fields == nil || len(*fields) == 0 {
 		return
 	}
@@ -86,10 +89,15 @@ func (e *JSONEncoder) EncodeFields(buf *Buffer, _ Level, fields *[]Field) {
 
 // EncodeStackTrace encodes the stack trace of the log message.
 func (e *JSONEncoder) EncodeStackTrace(buf *Buffer, skip int) {
-	// Print stack trace but skip the first 4 frames which are part of the
-	// logger itself.
-	buf.WriteString(stackTrace(skip))
-	buf.WriteBytes('\n')
+	buf.WriteBytes(',', '"')
+	buf.WriteString(e.KeyStackTrace)
+	buf.WriteBytes('"', ':')
+	buf.WriteEscapedString(stackTrace(skip))
+}
+
+// End writes the end of the log message.
+func (e *JSONEncoder) End(buf *Buffer) {
+	buf.WriteBytes('}', '\n')
 }
 
 // writeSafeField writes a field to the buffer not worrying about escaping it.

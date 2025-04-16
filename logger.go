@@ -151,6 +151,7 @@ func (l *Logger) print(lev Level, msg string, fields *[]Field) {
 	buf := getBuffer()
 	defer putBuffer(buf)
 
+	l.enc.Start(buf)
 	l.enc.EncodeTime(buf)
 	l.enc.EncodeLevel(buf, lev)
 	l.enc.EncodeMessage(buf, msg)
@@ -161,6 +162,7 @@ func (l *Logger) print(lev Level, msg string, fields *[]Field) {
 	if lev >= l.cfg.StackTraceLevel {
 		l.enc.EncodeStackTrace(buf, l.cfg.StackTraceSkip)
 	}
+	l.enc.End(buf)
 
 	l.lock.Lock()
 	_, _ = l.cfg.Output.Write(buf.b)
