@@ -12,7 +12,7 @@ func TestJSONEncoder(t *testing.T) {
 	cfg := DefaultConfig()
 	cfg.Output = &buf
 	cfg.Level = LevelDebug
-	cfg.Encoder = NewJSONEncoder(cfg)
+	cfg.Encoder = NewJSONEncoder()
 
 	logger := New(cfg)
 	ctx := context.Background()
@@ -29,7 +29,7 @@ func TestJSONEncoderNoFields(t *testing.T) {
 	cfg := DefaultConfig()
 	cfg.Output = &buf
 	cfg.Level = LevelDebug
-	cfg.Encoder = NewJSONEncoder(cfg)
+	cfg.Encoder = NewJSONEncoder()
 
 	logger := New(cfg)
 	ctx := context.Background()
@@ -43,8 +43,10 @@ func TestJSONEncoderNoFieldsNoTime(t *testing.T) {
 	cfg := DefaultConfig()
 	cfg.Output = &buf
 	cfg.Level = LevelDebug
-	cfg.Time = false
-	cfg.Encoder = NewJSONEncoder(cfg)
+
+	enc := NewJSONEncoder()
+	enc.TimeFormat = ""
+	cfg.Encoder = enc
 
 	logger := New(cfg)
 	ctx := context.Background()
@@ -61,6 +63,6 @@ func validateAndPrintJSON(t *testing.T, buf bytes.Buffer) {
 
 	var data map[string]any
 	if err := json.Unmarshal(buf.Bytes(), &data); err != nil {
-		t.Errorf("Failed to unmarshal JSON: %v", err)
+		t.Errorf("Failed to unmarshal JSON: %v\nJSON: %s", err, buf.String())
 	}
 }

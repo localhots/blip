@@ -30,7 +30,7 @@ func main() {
 		Level:           blip.LevelDebug,
 		Output:          io.Discard,
 		StackTraceLevel: blip.LevelError,
-		Encoder:         blip.NewJSONEncoder(blip.DefaultConfig()),
+		Encoder:         blip.NewJSONEncoder(),
 	})
 	ctx := context.Background()
 
