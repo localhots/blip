@@ -47,6 +47,9 @@ func NewConsoleEncoder() *ConsoleEncoder {
 	}
 }
 
+// Start writes the beginning of the log message.
+func (e *ConsoleEncoder) Start(_ *Buffer) {}
+
 // EncodeTime encodes the time of the log message.
 func (e *ConsoleEncoder) EncodeTime(buf *Buffer) {
 	if e.TimeFormat == "" {
@@ -97,7 +100,6 @@ func (e *ConsoleEncoder) EncodeMessage(buf *Buffer, msg string) {
 
 // EncodeFields encodes the fields of the log message.
 func (e *ConsoleEncoder) EncodeFields(buf *Buffer, lev Level, fields *[]Field) {
-	defer buf.WriteBytes('\n')
 	if fields == nil || len(*fields) == 0 {
 		return
 	}
@@ -119,9 +121,12 @@ func (e *ConsoleEncoder) EncodeFields(buf *Buffer, lev Level, fields *[]Field) {
 
 // EncodeStackTrace encodes the stack trace of the log message.
 func (e *ConsoleEncoder) EncodeStackTrace(buf *Buffer, skip int) {
-	// Print stack trace but skip the first 4 frames which are part of the
-	// logger itself.
+	buf.WriteBytes('\n')
 	buf.WriteString(stackTrace(skip))
+}
+
+// End writes the end of the log message.
+func (e *ConsoleEncoder) End(buf *Buffer) {
 	buf.WriteBytes('\n')
 }
 
