@@ -9,7 +9,7 @@ import (
 	"github.com/localhots/blip"
 )
 
-var logger *blip.Logger
+var logger = blip.New(blip.DefaultConfig())
 
 // F is a field set used to log key-value pairs.
 type F = blip.F
