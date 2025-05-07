@@ -47,15 +47,46 @@ if err := runTask(ctx, task); err != nil {
 
 ## Use
 
-Blip offers both an instance-based API and a package-level API. In fact, two
-package-level variants: one with context, one without. These can be used
-directly or copied into a project as a foundation for building a custom logging
-package.
+Blip offers both an
+[instance-based API](https://pkg.go.dev/github.com/localhots/blip) and a
+package-level API. In fact, two package-level variants:
+[one with context](https://pkg.go.dev/github.com/localhots/blip/ctx/log),
+[one without](https://pkg.go.dev/github.com/localhots/blip/noctx/log).
+These can be used directly or copied into a project as a foundation for building
+a custom logging package.
 
-See
-[ctx/log](https://pkg.go.dev/github.com/localhots/blip/ctx/log) and
-[noctx/log](https://pkg.go.dev/github.com/localhots/blip/noctx/log) subpackages
-for details.
+### Instance Based
+
+```go
+import "github.com/localhots/blip"
+
+ctx := context.Background()
+logger := blip.New(blip.DefaultConfig())
+logger.Info(ctx, "Callback received", log.F{
+	"task_id": 123456,
+})
+```
+
+### With Context
+
+```go
+import "github.com/localhots/blip/ctx/log"
+
+ctx := context.Background()
+log.Info(ctx, "Callback received", log.F{
+	"task_id": 123456,
+})
+```
+
+### Without Context
+
+```go
+import "github.com/localhots/blip/noctx/log"
+
+log.Info("Callback received", log.F{
+	"task_id": 123456,
+})
+```
 
 ## Configuration
 
@@ -144,8 +175,8 @@ development has effectively stopped.
 ### [phuslog](https://github.com/phuslu/log)
 
 Phuslog appears to be the absolute fastest logger available. It employs a lot of
-complex low-level code to achieve its performance, reflecting the significant
-effort behind it.
+complex low-level code to achieve its performance, demonstrating the significant
+effort that went into it.
 
 One reason for its speed is its highly optimized time serialization.
 Unfortunately, it accomplishes this by linking to unexported functions from the
