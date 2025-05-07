@@ -52,7 +52,10 @@ package-level variants: one with context, one without. These can be used
 directly or copied into a project as a foundation for building a custom logging
 package.
 
-See `ctx/log` and `noctx/log` subpackages for details.
+See
+[ctx/log](https://pkg.go.dev/github.com/localhots/blip/ctx/log) and
+[noctx/log](https://pkg.go.dev/github.com/localhots/blip/noctx/log) subpackages
+for details.
 
 ## Configuration
 
@@ -87,6 +90,16 @@ collections.
   corresponding values
 
 ## Performance
+
+Blip makes a few intentional compromises in favor of ergonomics and developer
+productivity: fields are passed as a map, and reflection is used instead of
+specialized functions to log field values. However, it mitigates most drawbacks
+through memory pooling for both messages and fields, and by caching timestamps
+to avoid expensive time serialization.
+
+Overall, if developer productivity matters more than chasing the absolute lowest
+latency, and a slight performance tradeoff per log call isn't that critical,
+Blip might be the right choice.
 
 ## Comparison to Other Loggers
 
