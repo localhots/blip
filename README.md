@@ -27,7 +27,7 @@ log.Error("Failed to process task", log.Cause(err), log.F{
 
 The use of `map[string]any` to define fields is optimized by the compiler and
 avoids stressing the garbage collector thanks to memory pooling, making it an
-efficient and worry-free way to log values without concern for their types.
+ergonomic and worry-free way to log values without concern for their types.
 
 ## Context
 
@@ -135,7 +135,7 @@ Blip might be the right choice.
 ## Comparison to Other Loggers
 
 While it's impossible to make a perfectly fair comparison, here are a few notes
-on how Blip compares to other popular logging libraries.
+on how Blip fares against other popular logging libraries.
 
 The main motivation behind Blip was to build a logger that is nicer than Logrus
 and is as fast as Zerolog.
@@ -158,13 +158,13 @@ as slow as Blip.
 
 In pretty mode, Zerolog first encodes messages as JSON, then parses and
 re-formats them for console output, which absolutely tanks its performance
-compared to the competition.
+compared to the competition. Clearly an afterthought.
 
 ### [zap](https://github.com/uber-go/zap)
 
-Zap achieves most of its performance gains through message sampling. With
-sampling disabled, its performance drops and it becomes slower than Blip in all
-use cases.
+Zap is reasonably fast but doesn't offer a true pretty mode. It achieves most of
+its performance gains through message sampling. With sampling disabled, its
+performance drops and it becomes much slower than Blip in all use cases.
 
 ### [logrus](https://github.com/sirupsen/logrus)
 
