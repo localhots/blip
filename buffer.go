@@ -155,8 +155,7 @@ func (buf *Buffer) writeEscapedUTF8(str string) int {
 // Buffers are pooled to reduce allocations.
 var bufferPool = sync.Pool{
 	New: func() any {
-		buf := Buffer{make([]byte, 0, bufferSize)}
-		return &buf
+		return &Buffer{make([]byte, 0, bufferSize)}
 	},
 }
 
