@@ -14,6 +14,9 @@ type Field struct {
 // F is a convenient alias for a map of fields.
 type F map[string]any
 
+// makeFields creates a slice of fields from the given context and field sets.
+// Explicitly logged fields take precedence over context fields. Last field set
+// wins if there are duplicates.
 func makeFields(ctx context.Context, ff []F) *[]Field {
 	var n int
 	for _, f := range ff {
