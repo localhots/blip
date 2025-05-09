@@ -28,10 +28,10 @@ func NewJSONEncoder() *JSONEncoder {
 		TimeFormat:     defaultTimeFormat,
 		TimePrecision:  defaultTimePrecision,
 		Base64Encoding: base64.StdEncoding,
-		KeyTime:        "ts",
-		KeyLevel:       "lvl",
-		KeyMsg:         "msg",
-		KeyStackTrace:  "stack",
+		KeyTime:        "time",
+		KeyLevel:       "level",
+		KeyMsg:         "message",
+		KeyStackTrace:  "stacktrace",
 	}
 }
 
