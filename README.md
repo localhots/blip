@@ -143,8 +143,9 @@ and is as fast as Zerolog.
 ### [log/slog](https://pkg.go.dev/log/slog)
 
 Slog is a structured logger introduced in Go 1.21. It accepts fields as variadic
-`any` arguments and offers both console and JSON encoders. However, it is
-neither particularly fast nor pretty.
+`any` arguments or as typed attributes, and supports both console and JSON
+encoders. It's allocation-free, fast (still ~2x slower than Blip) but not
+particularly pretty.
 
 ### [zerolog](https://github.com/rs/zerolog)
 
