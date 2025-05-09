@@ -17,10 +17,10 @@ log.Info("Callback received", log.F{
 
 Blip does not provide Printf-like methods, instead it encourages the use of
 fields. Fields are defined as a map, making it look nicely indented with `gofmt`.
-There is also a standardized helper for the error type: `log.Cause(err)`.
+There is also a standardized helper for the error type: `log.Err(err)`.
 
 ```go
-log.Error("Failed to process task", log.Cause(err), log.F{
+log.Error("Failed to process task", log.Err(err), log.F{
 	"task_id": 123456,
 })
 ```
@@ -41,7 +41,7 @@ ctx = log.WithContext(ctx, log.F{
 })
 
 if err := runTask(ctx, task); err != nil {
-	log.Error(ctx, "Task failed", log.Cause(err))
+	log.Error(ctx, "Task failed", log.Err(err))
 }
 ```
 

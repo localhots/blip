@@ -54,8 +54,8 @@ func Fatal(ctx context.Context, msg string, fields ...F) {
 	logger.Fatal(ctx, msg, fields...)
 }
 
-// Cause returns a field set that wraps the given error in a standardized way.
-func Cause(err error) F {
+// Err returns a field set that wraps the given error in a standardized way.
+func Err(err error) F {
 	return F{"error": err.Error()}
 }
 

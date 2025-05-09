@@ -64,10 +64,10 @@ func main() {
 	log.Warn(blip.WithContext(ctx, log.F{"foo": "bar"}), "Duplicate task is exactly 39 characters", log.F{
 		"task_id": 123456,
 	})
-	log.Error(ctx, "Failed to process task", log.Cause(err), log.F{
+	log.Error(ctx, "Failed to process task", log.Err(err), log.F{
 		"task_id": 123456,
 	})
-	log.Panic(ctx, "Failed to start service", log.Cause(err), log.F{
+	log.Panic(ctx, "Failed to start service", log.Err(err), log.F{
 		"service": "api",
 	})
 }
