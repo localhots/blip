@@ -13,7 +13,7 @@ type JSONEncoder struct {
 	Base64Encoding *base64.Encoding
 	KeyTime        string
 	KeyLevel       string
-	KeyMsg         string
+	KeyMessage     string
 	KeyStackTrace  string
 
 	timeCache func(time.Time) string
@@ -30,7 +30,7 @@ func NewJSONEncoder() *JSONEncoder {
 		Base64Encoding: base64.StdEncoding,
 		KeyTime:        "time",
 		KeyLevel:       "level",
-		KeyMsg:         "message",
+		KeyMessage:     "message",
 		KeyStackTrace:  "stacktrace",
 	}
 }
@@ -45,13 +45,16 @@ func (e *JSONEncoder) EncodeTime(buf *Buffer) {
 	if e.TimeFormat == "" {
 		return
 	}
-	if e.timeCache == nil && e.TimePrecision > 0 {
-		e.timeCache = timeCache(e.TimeFormat, e.TimePrecision)
-	}
-	if e.timeCache != nil {
+
+	if e.TimePrecision > 0 {
+		if e.timeCache == nil {
+			e.timeCache = timeCache(e.TimeFormat, e.TimePrecision)
+		}
 		e.writeSafeField(buf, e.KeyTime, e.timeCache(timeNow()))
 	} else {
 		buf.WriteBytes('"')
+		buf.WriteString(e.KeyTime)
+		buf.WriteBytes('"', ':', '"')
 		buf.WriteTime(timeNow(), e.TimeFormat)
 		buf.WriteBytes('"')
 	}
@@ -62,13 +65,13 @@ func (e *JSONEncoder) EncodeLevel(buf *Buffer, lev Level) {
 	if e.TimeFormat != "" {
 		buf.WriteBytes(',')
 	}
-	e.writeSafeField(buf, e.KeyLevel, lev.String())
+	e.writeSafeField(buf, e.KeyLevel, e.levelString(lev))
 }
 
 // EncodeMessage encodes the log message.
 func (e *JSONEncoder) EncodeMessage(buf *Buffer, msg string) {
 	buf.WriteBytes(',', '"')
-	buf.WriteString(e.KeyMsg)
+	buf.WriteString(e.KeyMessage)
 	buf.WriteBytes('"', ':')
 	buf.WriteEscapedString(msg)
 }
@@ -155,5 +158,26 @@ func (e *JSONEncoder) writeAny(buf *Buffer, val any) {
 	default:
 		//nolint:errchkjson
 		_ = json.NewEncoder(buf).Encode(v)
+	}
+}
+
+func (e *JSONEncoder) levelString(lev Level) string {
+	switch lev {
+	case LevelTrace:
+		return "trace"
+	case LevelDebug:
+		return "debug"
+	case LevelInfo:
+		return "info"
+	case LevelWarn:
+		return "warn"
+	case LevelError:
+		return "error"
+	case LevelPanic:
+		return "panic"
+	case LevelFatal:
+		return "fatal"
+	default:
+		panic("unreachable")
 	}
 }

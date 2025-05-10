@@ -1,10 +1,12 @@
-.PHONY: lint test bench fuzz pprof demo demo-console demo-json
+.PHONY: all lint test bench fuzz pprof demo demo-console demo-json
 
-lint:
-	golangci-lint run
+all: test lint
 
 test:
 	go test -v -run=Test
+
+lint:
+	golangci-lint run
 
 bench:
 	go test -v -bench=. -benchmem -run=Benchmark
