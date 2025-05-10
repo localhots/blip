@@ -10,7 +10,6 @@ import (
 type JSONEncoder struct {
 	TimeFormat     string
 	TimePrecision  time.Duration
-	LevelStringer  LevelStringer
 	Base64Encoding *base64.Encoding
 	KeyTime        string
 	KeyLevel       string
@@ -28,7 +27,6 @@ func NewJSONEncoder() *JSONEncoder {
 	return &JSONEncoder{
 		TimeFormat:     defaultTimeFormat,
 		TimePrecision:  defaultTimePrecision,
-		LevelStringer:  LevelFullLowercase,
 		Base64Encoding: base64.StdEncoding,
 		KeyTime:        "time",
 		KeyLevel:       "level",
@@ -64,13 +62,10 @@ func (e *JSONEncoder) EncodeTime(buf *Buffer) {
 
 // EncodeLevel encodes the log level of the message.
 func (e *JSONEncoder) EncodeLevel(buf *Buffer, lev Level) {
-	if e.LevelStringer == nil {
-		e.LevelStringer = LevelFullLowercase
-	}
 	if e.TimeFormat != "" {
 		buf.WriteBytes(',')
 	}
-	e.writeSafeField(buf, e.KeyLevel, e.LevelStringer(lev))
+	e.writeSafeField(buf, e.KeyLevel, e.levelString(lev))
 }
 
 // EncodeMessage encodes the log message.
@@ -163,5 +158,26 @@ func (e *JSONEncoder) writeAny(buf *Buffer, val any) {
 	default:
 		//nolint:errchkjson
 		_ = json.NewEncoder(buf).Encode(v)
+	}
+}
+
+func (e *JSONEncoder) levelString(lev Level) string {
+	switch lev {
+	case LevelTrace:
+		return "trace"
+	case LevelDebug:
+		return "debug"
+	case LevelInfo:
+		return "info"
+	case LevelWarn:
+		return "warn"
+	case LevelError:
+		return "error"
+	case LevelPanic:
+		return "panic"
+	case LevelFatal:
+		return "fatal"
+	default:
+		panic("unreachable")
 	}
 }

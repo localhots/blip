@@ -176,51 +176,6 @@ func (l *Logger) print(lev Level, msg string, fields *[]Field) {
 // Helpers
 //
 
-// LevelShortUppercase returns level label that is first 4 characters in
-// uppercase.
-func LevelShortUppercase(lev Level) string {
-	switch lev {
-	case LevelTrace:
-		return "TRAC"
-	case LevelDebug:
-		return "DEBU"
-	case LevelInfo:
-		return "INFO"
-	case LevelWarn:
-		return "WARN"
-	case LevelError:
-		return "ERRO"
-	case LevelPanic:
-		return "PANI"
-	case LevelFatal:
-		return "FATA"
-	default:
-		panic("unreachable")
-	}
-}
-
-// LevelFullLowercase returns level label that is all lowercase.
-func LevelFullLowercase(lev Level) string {
-	switch lev {
-	case LevelTrace:
-		return "trace"
-	case LevelDebug:
-		return "debug"
-	case LevelInfo:
-		return "info"
-	case LevelWarn:
-		return "warn"
-	case LevelError:
-		return "error"
-	case LevelPanic:
-		return "panic"
-	case LevelFatal:
-		return "fatal"
-	default:
-		panic("unreachable")
-	}
-}
-
 func stackTrace(skip int) string {
 	// Get up to 100 stack frames
 	pc := make([]uintptr, 100)
