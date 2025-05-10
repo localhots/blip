@@ -35,9 +35,6 @@ type Config struct {
 // Level is the log level type.
 type Level int
 
-// LevelStringer is a function type that converts a log level to a string.
-type LevelStringer func(Level) string
-
 // Supported log levels.
 const (
 	LevelTrace Level = iota + 1
