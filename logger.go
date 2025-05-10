@@ -35,6 +35,9 @@ type Config struct {
 // Level is the log level type.
 type Level int
 
+// LevelStringer is a function type that converts a log level to a string.
+type LevelStringer func(Level) string
+
 // Supported log levels.
 const (
 	LevelTrace Level = iota + 1
@@ -173,8 +176,9 @@ func (l *Logger) print(lev Level, msg string, fields *[]Field) {
 // Helpers
 //
 
-// levelName returns level label that is consistently 4 characters long.
-func (lev Level) String() string {
+// LevelShortUppercase returns level label that is first 4 characters in
+// uppercase.
+func LevelShortUppercase(lev Level) string {
 	switch lev {
 	case LevelTrace:
 		return "TRAC"
@@ -190,6 +194,28 @@ func (lev Level) String() string {
 		return "PANI"
 	case LevelFatal:
 		return "FATA"
+	default:
+		panic("unreachable")
+	}
+}
+
+// LevelFullLowercase returns level label that is all lowercase.
+func LevelFullLowercase(lev Level) string {
+	switch lev {
+	case LevelTrace:
+		return "trace"
+	case LevelDebug:
+		return "debug"
+	case LevelInfo:
+		return "info"
+	case LevelWarn:
+		return "warn"
+	case LevelError:
+		return "error"
+	case LevelPanic:
+		return "panic"
+	case LevelFatal:
+		return "fatal"
 	default:
 		panic("unreachable")
 	}

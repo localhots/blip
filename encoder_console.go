@@ -10,6 +10,7 @@ import (
 type ConsoleEncoder struct {
 	TimeFormat      string
 	TimePrecision   time.Duration
+	LevelStringer   LevelStringer
 	MinMessageWidth int
 	SortFields      bool
 	Color           bool
@@ -41,6 +42,7 @@ func NewConsoleEncoder() *ConsoleEncoder {
 	return &ConsoleEncoder{
 		TimeFormat:      defaultTimeFormat,
 		TimePrecision:   defaultTimePrecision,
+		LevelStringer:   LevelShortUppercase,
 		MinMessageWidth: defaultMessageWidth,
 		SortFields:      true,
 		Color:           true,
@@ -55,10 +57,10 @@ func (e *ConsoleEncoder) EncodeTime(buf *Buffer) {
 	if e.TimeFormat == "" {
 		return
 	}
-	if e.timeCache == nil && e.TimePrecision > 0 {
-		e.timeCache = timeCache(e.TimeFormat, e.TimePrecision)
-	}
-	if e.timeCache != nil {
+	if e.TimePrecision > 0 {
+		if e.timeCache == nil {
+			e.timeCache = timeCache(e.TimeFormat, e.TimePrecision)
+		}
 		buf.WriteString(e.timeCache(timeNow()))
 	} else {
 		buf.WriteTime(timeNow(), e.TimeFormat)
@@ -68,7 +70,10 @@ func (e *ConsoleEncoder) EncodeTime(buf *Buffer) {
 
 // EncodeLevel encodes the log level of the message.
 func (e *ConsoleEncoder) EncodeLevel(buf *Buffer, lev Level) {
-	e.writeColorized(buf, lev, lev.String())
+	if e.LevelStringer == nil {
+		e.LevelStringer = LevelShortUppercase
+	}
+	e.writeColorized(buf, lev, e.LevelStringer(lev))
 	buf.WriteBytes(' ')
 }
 
