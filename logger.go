@@ -173,28 +173,6 @@ func (l *Logger) print(lev Level, msg string, fields *[]Field) {
 // Helpers
 //
 
-// levelName returns level label that is consistently 4 characters long.
-func (lev Level) String() string {
-	switch lev {
-	case LevelTrace:
-		return "TRAC"
-	case LevelDebug:
-		return "DEBU"
-	case LevelInfo:
-		return "INFO"
-	case LevelWarn:
-		return "WARN"
-	case LevelError:
-		return "ERRO"
-	case LevelPanic:
-		return "PANI"
-	case LevelFatal:
-		return "FATA"
-	default:
-		panic("unreachable")
-	}
-}
-
 func stackTrace(skip int) string {
 	// Get up to 100 stack frames
 	pc := make([]uintptr, 100)

@@ -55,10 +55,10 @@ func (e *ConsoleEncoder) EncodeTime(buf *Buffer) {
 	if e.TimeFormat == "" {
 		return
 	}
-	if e.timeCache == nil && e.TimePrecision > 0 {
-		e.timeCache = timeCache(e.TimeFormat, e.TimePrecision)
-	}
-	if e.timeCache != nil {
+	if e.TimePrecision > 0 {
+		if e.timeCache == nil {
+			e.timeCache = timeCache(e.TimeFormat, e.TimePrecision)
+		}
 		buf.WriteString(e.timeCache(timeNow()))
 	} else {
 		buf.WriteTime(timeNow(), e.TimeFormat)
@@ -68,7 +68,7 @@ func (e *ConsoleEncoder) EncodeTime(buf *Buffer) {
 
 // EncodeLevel encodes the log level of the message.
 func (e *ConsoleEncoder) EncodeLevel(buf *Buffer, lev Level) {
-	e.writeColorized(buf, lev, lev.String())
+	e.writeColorized(buf, lev, e.levelString(lev))
 	buf.WriteBytes(' ')
 }
 
@@ -197,4 +197,25 @@ func (e *ConsoleEncoder) writeColorized(buf *Buffer, lev Level, str string) {
 	}
 	buf.WriteString(str)
 	buf.WriteString(fontReset)
+}
+
+func (e *ConsoleEncoder) levelString(lev Level) string {
+	switch lev {
+	case LevelTrace:
+		return "TRAC"
+	case LevelDebug:
+		return "DEBU"
+	case LevelInfo:
+		return "INFO"
+	case LevelWarn:
+		return "WARN"
+	case LevelError:
+		return "ERRO"
+	case LevelPanic:
+		return "PANI"
+	case LevelFatal:
+		return "FATA"
+	default:
+		panic("unreachable")
+	}
 }
