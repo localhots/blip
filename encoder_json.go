@@ -48,9 +48,6 @@ func (e *JSONEncoder) EncodeTime(buf *Buffer) {
 		return
 	}
 
-	buf.WriteBytes('"')
-	buf.WriteString(e.KeyTime)
-	buf.WriteBytes('"', ':')
 	if e.TimePrecision > 0 {
 		if e.timeCache == nil {
 			e.timeCache = timeCache(e.TimeFormat, e.TimePrecision)
@@ -58,6 +55,8 @@ func (e *JSONEncoder) EncodeTime(buf *Buffer) {
 		e.writeSafeField(buf, e.KeyTime, e.timeCache(timeNow()))
 	} else {
 		buf.WriteBytes('"')
+		buf.WriteString(e.KeyTime)
+		buf.WriteBytes('"', ':', '"')
 		buf.WriteTime(timeNow(), e.TimeFormat)
 		buf.WriteBytes('"')
 	}
