@@ -61,7 +61,7 @@ func main() {
 	log.Warn(ctx, "Duplicate task but exactly 40 characters", log.F{
 		"task_id": 123456,
 	})
-	log.Warn(blip.WithContext(ctx, log.F{"foo": "bar"}), "Duplicate task is exactly 39 characters", log.F{
+	log.Warn(blip.ContextWithFields(ctx, log.F{"foo": "bar"}), "Duplicate task is exactly 39 characters", log.F{
 		"task_id": 123456,
 	})
 	log.Error(ctx, "Failed to process task", log.Cause(err), log.F{

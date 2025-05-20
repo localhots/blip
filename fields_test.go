@@ -8,7 +8,7 @@ import (
 
 func TestMakeFields(t *testing.T) {
 	ctx := context.Background()
-	ctx = WithContext(ctx, F{
+	ctx = ContextWithFields(ctx, F{
 		"a": 1,
 		"b": 2,
 	})

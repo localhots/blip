@@ -59,12 +59,12 @@ func Cause(err error) F {
 	return F{"error": err.Error()}
 }
 
-// WithContext adds logging fields to the context.
-func WithContext(ctx context.Context, fields F) context.Context {
-	return blip.WithContext(ctx, fields)
+// ContextWithFields adds logging fields to the context.
+func ContextWithFields(ctx context.Context, fields F) context.Context {
+	return blip.ContextWithFields(ctx, fields)
 }
 
-// FromContext retrieves logging fields from the context.
-func FromContext(ctx context.Context) F {
-	return blip.FromContext(ctx)
+// FieldsFromContext retrieves logging fields from the context.
+func FieldsFromContext(ctx context.Context) F {
+	return blip.FieldsFromContext(ctx)
 }

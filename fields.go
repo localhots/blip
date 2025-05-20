@@ -27,7 +27,7 @@ func makeFields(ctx context.Context, ff []F) *[]Field {
 	}
 
 	fields := getFields()
-	for k, v := range FromContext(ctx) {
+	for k, v := range FieldsFromContext(ctx) {
 		addField(fields, k, v)
 	}
 	for _, f := range ff {

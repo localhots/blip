@@ -36,7 +36,7 @@ Such fields will be logged with every message.
 
 ```go
 ctx := context.Background()
-ctx = log.WithContext(ctx, log.F{
+ctx = log.ContextWithFields(ctx, log.F{
 	"task_id": task.ID,
 })
 
