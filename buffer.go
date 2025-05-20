@@ -165,6 +165,12 @@ func getBuffer() *Buffer {
 }
 
 func putBuffer(buf *Buffer) {
+	const maxCap = 10 * bufferSize
+	if cap(buf.b) > maxCap {
+		// If the buffer is too large, let it get garbage collected.
+		// This avoids keeping large buffers in the pool to reduce memory usage.
+		return
+	}
 	buf.b = buf.b[:0] // Reset the underlying slice
 	bufferPool.Put(buf)
 }
