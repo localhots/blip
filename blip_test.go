@@ -202,8 +202,8 @@ func BenchmarkPrettySortedContext(b *testing.B) {
 		StackTraceLevel: blip.LevelError,
 	})
 	ctx := context.Background()
-	ctx = blip.WithContext(ctx, log.F{"foo": "bar"})
-	ctx = blip.WithContext(ctx, log.F{"one": "two"})
+	ctx = blip.ContextWithFields(ctx, log.F{"foo": "bar"})
+	ctx = blip.ContextWithFields(ctx, log.F{"one": "two"})
 
 	b.ResetTimer()
 	for range b.N {
