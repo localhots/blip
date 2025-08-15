@@ -29,6 +29,33 @@ func TestMakeFields(t *testing.T) {
 	}
 }
 
+func TestMakeFieldsEmpty(t *testing.T) {
+	ctx := context.Background()
+	fields := makeFields(ctx, []F{})
+	if fields != nil {
+		t.Errorf("expected nil, got %v", fields)
+	}
+}
+
+func TestMakeFieldsOnlyContext(t *testing.T) {
+	ctx := context.Background()
+	ctx = ContextWithFields(ctx, F{
+		"a": 1,
+	})
+	fields := makeFields(ctx, nil)
+	if fields == nil {
+		t.Fatal("expected non-nil fields")
+	}
+	defer putFields(fields)
+
+	exp := []Field{
+		{"a", 1},
+	}
+	if !slices.Equal(exp, *fields) {
+		t.Errorf("expected %v, got %v", exp, *fields)
+	}
+}
+
 func TestSortFields(t *testing.T) {
 	fields := []Field{
 		{"b", 2},

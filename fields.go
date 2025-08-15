@@ -18,7 +18,8 @@ type F map[string]any
 // Explicitly logged fields take precedence over context fields. Last field set
 // wins if there are duplicates.
 func makeFields(ctx context.Context, ff []F) *[]Field {
-	var n int
+	cf := FieldsFromContext(ctx)
+	n := len(cf)
 	for _, f := range ff {
 		n += len(f)
 	}
@@ -27,7 +28,7 @@ func makeFields(ctx context.Context, ff []F) *[]Field {
 	}
 
 	fields := getFields()
-	for k, v := range FieldsFromContext(ctx) {
+	for k, v := range cf {
 		addField(fields, k, v)
 	}
 	for _, f := range ff {
