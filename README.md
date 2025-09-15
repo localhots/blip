@@ -13,7 +13,8 @@ log.Info("Callback received", log.F{
 })
 ```
 
-![Demo](https://github.com/user-attachments/assets/55175d0b-80a5-4fb9-9088-a331a6f3e372)
+
+<img width="1265" height="417" alt="Demo" src="https://github.com/user-attachments/assets/22c896a7-9f28-4ffb-9a13-6b99b83d78f5" />
 
 Blip does not provide Printf-like methods, instead it encourages the use of
 fields. Fields are defined as a map, making it look nicely indented with `gofmt`.
@@ -52,7 +53,7 @@ Blip offers both an
 package-level API. In fact, two package-level variants:
 [one with context](https://pkg.go.dev/github.com/localhots/blip/ctx/log),
 [one without](https://pkg.go.dev/github.com/localhots/blip/noctx/log).
-These can be used directly or copied into a project as a foundation for building
+These can be used directly or copied into a project as a template for
 a custom logging package.
 
 ### Instance Based
