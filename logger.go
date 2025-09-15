@@ -89,7 +89,7 @@ func DefaultConfig() Config {
 	return Config{
 		Level:           LevelInfo,
 		Output:          os.Stderr,
-		StackTraceLevel: LevelError,
+		StackTraceLevel: LevelPanic,
 		StackTraceSkip:  4,
 		Encoder:         NewConsoleEncoder(),
 	}
