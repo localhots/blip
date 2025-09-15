@@ -96,7 +96,7 @@ The logger can be configured with:
 - `Level` — minimum logging level (`Info` by default)
 - `Output` — log destination (`stderr` by default)
 - `Encoder` — console, JSON, or a custom encoder (console by default)
-- `StackTraceLevel` — minimum level at which stack traces are logged (`Error` by default)
+- `StackTraceLevel` — minimum level at which stack traces are logged (`Panic` by default)
 
 Blip includes two built-in encoders: console and JSON, both are further
 customizable.
