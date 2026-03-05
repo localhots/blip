@@ -126,7 +126,7 @@ func (e *ConsoleEncoder) EncodeFields(buf *Buffer, lev Level, fields *[]Field) {
 // EncodeStackTrace encodes the stack trace of the log message.
 func (e *ConsoleEncoder) EncodeStackTrace(buf *Buffer, skip int) {
 	buf.WriteBytes('\n')
-	buf.WriteString(stackTrace(skip))
+	writeStackTrace(buf, skip)
 }
 
 // End writes the end of the log message.
