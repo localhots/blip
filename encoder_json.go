@@ -94,8 +94,9 @@ func (e *JSONEncoder) EncodeFields(buf *Buffer, _ Level, fields *[]Field) {
 func (e *JSONEncoder) EncodeStackTrace(buf *Buffer, skip int) {
 	buf.WriteBytes(',', '"')
 	buf.WriteString(e.KeyStackTrace)
-	buf.WriteBytes('"', ':')
-	buf.WriteEscapedString(stackTrace(skip))
+	buf.WriteBytes('"', ':', '"')
+	writeStackTraceEscaped(buf, skip)
+	buf.WriteBytes('"')
 }
 
 // End writes the end of the log message.
