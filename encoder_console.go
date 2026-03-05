@@ -2,6 +2,7 @@ package blip
 
 import (
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -31,7 +32,10 @@ const (
 	fontReset     = "\033[0m"
 )
 
-var _ Encoder = (*ConsoleEncoder)(nil)
+var (
+	_ Encoder = (*ConsoleEncoder)(nil)
+	padding   = strings.Repeat(" ", 128)
+)
 
 // NewConsoleEncoder creates a new console encoder with the given configuration.
 // The encoder formats log messages in a human-readable format, with
@@ -87,8 +91,8 @@ func (e *ConsoleEncoder) EncodeMessage(buf *Buffer, msg string) {
 
 	// Pad the message to the configured width +2 spaces to separate it from
 	// the fields.
-	for range e.MinMessageWidth + 2 - len(msg) {
-		buf.WriteBytes(' ')
+	if padLen := e.MinMessageWidth + 2 - len(msg); padLen > 0 {
+		buf.WriteString(padding[:padLen])
 	}
 	// If the message is long enough not to be padded, add an extra space to
 	// separate it from the fields
