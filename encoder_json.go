@@ -155,6 +155,8 @@ func (e *JSONEncoder) writeAny(buf *Buffer, val any) {
 		buf.WriteBytes('"')
 		buf.WriteTime(v, TimeFieldFormat)
 		buf.WriteBytes('"')
+	case error:
+		buf.WriteEscapedString(v.Error())
 	default:
 		//nolint:errchkjson
 		_ = json.NewEncoder(buf).Encode(v)
