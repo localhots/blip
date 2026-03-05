@@ -174,6 +174,8 @@ func (e *ConsoleEncoder) writeAny(buf *Buffer, val any) {
 		buf.WriteDuration(v.Truncate(DurationFieldPrecision))
 	case time.Time:
 		buf.WriteTime(v, TimeFieldFormat)
+	case error:
+		buf.WriteString(v.Error())
 	default:
 		// TODO: Add support for custom encoders
 		buf.WriteString(fmt.Sprint(v))
