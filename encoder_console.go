@@ -78,6 +78,18 @@ func (e *ConsoleEncoder) EncodeLevel(buf *Buffer, lev Level) {
 
 // EncodeMessage encodes the log message.
 func (e *ConsoleEncoder) EncodeMessage(buf *Buffer, msg string) {
+	if e.MinMessageWidth == 0 {
+		// Fast path: no padding. No references to padding code so this stays minimal.
+		if e.Color {
+			buf.WriteString(fontBold)
+		}
+		buf.WriteString(msg)
+		if e.Color {
+			buf.WriteString(fontReset)
+		}
+		return
+	}
+	// Padding path
 	if e.Color {
 		buf.WriteString(fontBold)
 	}
