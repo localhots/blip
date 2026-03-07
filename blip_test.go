@@ -215,3 +215,214 @@ func BenchmarkPrettySortedContext(b *testing.B) {
 		})
 	}
 }
+
+//
+// Extended benchmarks: field count variations
+//
+
+func BenchmarkJSONNoFields(b *testing.B) {
+	log.Setup(blip.Config{
+		Level:           blip.LevelDebug,
+		Output:          io.Discard,
+		StackTraceLevel: blip.LevelError,
+		Encoder:         blip.NewJSONEncoder(),
+	})
+	ctx := context.Background()
+
+	b.ResetTimer()
+	for range b.N {
+		log.Info(ctx, "Starting task")
+	}
+}
+
+func BenchmarkJSONOneField(b *testing.B) {
+	log.Setup(blip.Config{
+		Level:           blip.LevelDebug,
+		Output:          io.Discard,
+		StackTraceLevel: blip.LevelError,
+		Encoder:         blip.NewJSONEncoder(),
+	})
+	ctx := context.Background()
+
+	b.ResetTimer()
+	for range b.N {
+		log.Info(ctx, "Starting task", log.F{
+			"task_id": 123456,
+		})
+	}
+}
+
+func BenchmarkJSONTenFields(b *testing.B) {
+	log.Setup(blip.Config{
+		Level:           blip.LevelDebug,
+		Output:          io.Discard,
+		StackTraceLevel: blip.LevelError,
+		Encoder:         blip.NewJSONEncoder(),
+	})
+	ctx := context.Background()
+
+	b.ResetTimer()
+	for range b.N {
+		log.Info(ctx, "Starting task", log.F{
+			"device_unique_id": "G4000E-1000-F",
+			"task_id":          123456,
+			"status":           "success",
+			"template_name":    "index.tpl",
+			"user_id":          "usr_abc123",
+			"request_id":       "req_xyz789",
+			"duration_ms":      42,
+			"retry_count":      3,
+			"region":           "us-east-1",
+			"version":          "v2.1.0",
+		})
+	}
+}
+
+func BenchmarkJSONContext(b *testing.B) {
+	log.Setup(blip.Config{
+		Level:           blip.LevelDebug,
+		Output:          io.Discard,
+		StackTraceLevel: blip.LevelError,
+		Encoder:         blip.NewJSONEncoder(),
+	})
+	ctx := context.Background()
+	ctx = blip.ContextWithFields(ctx, log.F{"request_id": "req_xyz789"})
+	ctx = blip.ContextWithFields(ctx, log.F{"user_id": "usr_abc123"})
+
+	b.ResetTimer()
+	for range b.N {
+		log.Info(ctx, "Starting task", log.F{
+			"device_unique_id": "G4000E-1000-F",
+			"task_id":          123456,
+			"status":           "success",
+			"template_name":    "index.tpl",
+		})
+	}
+}
+
+func BenchmarkPrettyNoFields(b *testing.B) {
+	log.Setup(blip.Config{
+		Level:  blip.LevelDebug,
+		Output: io.Discard,
+		Encoder: &blip.ConsoleEncoder{
+			TimeFormat:      "2006-01-02 15:04:05.000",
+			TimePrecision:   1 * time.Millisecond,
+			Color:           true,
+			MinMessageWidth: 40,
+			SortFields:      true,
+		},
+		StackTraceLevel: blip.LevelError,
+	})
+	ctx := context.Background()
+
+	b.ResetTimer()
+	for range b.N {
+		log.Info(ctx, "Starting task")
+	}
+}
+
+func BenchmarkPrettyTenFields(b *testing.B) {
+	log.Setup(blip.Config{
+		Level:  blip.LevelDebug,
+		Output: io.Discard,
+		Encoder: &blip.ConsoleEncoder{
+			TimeFormat:      "2006-01-02 15:04:05.000",
+			TimePrecision:   1 * time.Millisecond,
+			Color:           true,
+			MinMessageWidth: 40,
+			SortFields:      true,
+		},
+		StackTraceLevel: blip.LevelError,
+	})
+	ctx := context.Background()
+
+	b.ResetTimer()
+	for range b.N {
+		log.Info(ctx, "Starting task", log.F{
+			"device_unique_id": "G4000E-1000-F",
+			"task_id":          123456,
+			"status":           "success",
+			"template_name":    "index.tpl",
+			"user_id":          "usr_abc123",
+			"request_id":       "req_xyz789",
+			"duration_ms":      42,
+			"retry_count":      3,
+			"region":           "us-east-1",
+			"version":          "v2.1.0",
+		})
+	}
+}
+
+//
+// Extended benchmarks: special cases
+//
+
+func BenchmarkDisabled(b *testing.B) {
+	log.Setup(blip.Config{
+		Level:           blip.LevelError,
+		Output:          io.Discard,
+		StackTraceLevel: blip.LevelPanic,
+		Encoder:         blip.NewJSONEncoder(),
+	})
+	ctx := context.Background()
+
+	b.ResetTimer()
+	for range b.N {
+		log.Info(ctx, "Starting task", log.F{
+			"device_unique_id": "G4000E-1000-F",
+			"task_id":          123456,
+			"status":           "success",
+			"template_name":    "index.tpl",
+		})
+	}
+}
+
+func BenchmarkParallelJSON(b *testing.B) {
+	logger := blip.New(blip.Config{
+		Level:           blip.LevelDebug,
+		Output:          io.Discard,
+		StackTraceLevel: blip.LevelError,
+		Encoder:         blip.NewJSONEncoder(),
+	})
+	ctx := context.Background()
+
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			logger.Info(ctx, "Starting task", blip.F{
+				"device_unique_id": "G4000E-1000-F",
+				"task_id":          123456,
+				"status":           "success",
+				"template_name":    "index.tpl",
+			})
+		}
+	})
+}
+
+func BenchmarkParallelPretty(b *testing.B) {
+	logger := blip.New(blip.Config{
+		Level:  blip.LevelDebug,
+		Output: io.Discard,
+		Encoder: &blip.ConsoleEncoder{
+			TimeFormat:      "2006-01-02 15:04:05.000",
+			TimePrecision:   1 * time.Millisecond,
+			Color:           true,
+			MinMessageWidth: 40,
+			SortFields:      true,
+		},
+		StackTraceLevel: blip.LevelError,
+	})
+	ctx := context.Background()
+
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			logger.Info(ctx, "Starting task", blip.F{
+				"device_unique_id": "G4000E-1000-F",
+				"task_id":          123456,
+				"status":           "success",
+				"template_name":    "index.tpl",
+			})
+		}
+	})
+}
