@@ -28,6 +28,16 @@ func makeFields(ctx context.Context, ff []F) *[]Field {
 	}
 
 	fields := getFields()
+
+	// Fast path: single field set, no context fields. Deduplication is
+	// impossible because map keys are unique within a single map.
+	if cf == nil && len(ff) == 1 {
+		for k, v := range ff[0] {
+			*fields = append(*fields, Field{k, v})
+		}
+		return fields
+	}
+
 	for k, v := range cf {
 		addField(fields, k, v)
 	}
