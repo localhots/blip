@@ -16,7 +16,12 @@ type JSONEncoder struct {
 	KeyMessage     string
 	KeyStackTrace  string
 
-	timeCache func(time.Time) string
+	timeCache   func(time.Time) string
+	levelValues [7]string // Pre-built: "trace","debug","info",...
+	timePrefix  string    // `"time":"`
+	levelPrefix string    // `,"level":"` or `"level":"`
+	msgPrefix   string    // `,"message":`
+	tracePrefix string    // `,"stacktrace":"`
 }
 
 var _ Encoder = (*JSONEncoder)(nil)
@@ -35,6 +40,27 @@ func NewJSONEncoder() *JSONEncoder {
 	}
 }
 
+// prepare pre-computes cached values. Called from Logger.New().
+func (e *JSONEncoder) prepare() {
+	// Pre-build level values
+	e.levelValues = [7]string{"trace", "debug", "info", "warn", "error", "panic", "fatal"}
+
+	// Pre-build structural prefixes
+	if e.TimeFormat != "" {
+		e.timePrefix = `"` + e.KeyTime + `":"`
+		e.levelPrefix = `,"` + e.KeyLevel + `":"`
+	} else {
+		e.levelPrefix = `"` + e.KeyLevel + `":"`
+	}
+	e.msgPrefix = `,"` + e.KeyMessage + `":`
+	e.tracePrefix = `,"` + e.KeyStackTrace + `":"`
+
+	// Initialize time cache
+	if e.TimeFormat != "" && e.TimePrecision > 0 {
+		e.timeCache = timeCache(e.TimeFormat, e.TimePrecision)
+	}
+}
+
 // Start writes the beginning of the log message.
 func (e *JSONEncoder) Start(buf *Buffer) {
 	buf.WriteBytes('{')
@@ -42,19 +68,16 @@ func (e *JSONEncoder) Start(buf *Buffer) {
 
 // EncodeTime encodes the time of the log message.
 func (e *JSONEncoder) EncodeTime(buf *Buffer) {
-	if e.TimeFormat == "" {
+	if e.timePrefix == "" {
 		return
 	}
 
-	if e.TimePrecision > 0 {
-		if e.timeCache == nil {
-			e.timeCache = timeCache(e.TimeFormat, e.TimePrecision)
-		}
-		e.writeSafeField(buf, e.KeyTime, e.timeCache(timeNow()))
-	} else {
+	if e.timeCache != nil {
+		buf.WriteString(e.timePrefix)
+		buf.WriteString(e.timeCache(timeNow()))
 		buf.WriteBytes('"')
-		buf.WriteString(e.KeyTime)
-		buf.WriteBytes('"', ':', '"')
+	} else {
+		buf.WriteString(e.timePrefix)
 		buf.WriteTime(timeNow(), e.TimeFormat)
 		buf.WriteBytes('"')
 	}
@@ -62,17 +85,14 @@ func (e *JSONEncoder) EncodeTime(buf *Buffer) {
 
 // EncodeLevel encodes the log level of the message.
 func (e *JSONEncoder) EncodeLevel(buf *Buffer, lev Level) {
-	if e.TimeFormat != "" {
-		buf.WriteBytes(',')
-	}
-	e.writeSafeField(buf, e.KeyLevel, e.levelString(lev))
+	buf.WriteString(e.levelPrefix)
+	buf.WriteString(e.levelValues[lev-1])
+	buf.WriteBytes('"')
 }
 
 // EncodeMessage encodes the log message.
 func (e *JSONEncoder) EncodeMessage(buf *Buffer, msg string) {
-	buf.WriteBytes(',', '"')
-	buf.WriteString(e.KeyMessage)
-	buf.WriteBytes('"', ':')
+	buf.WriteString(e.msgPrefix)
 	buf.WriteEscapedString(msg)
 }
 
@@ -92,9 +112,7 @@ func (e *JSONEncoder) EncodeFields(buf *Buffer, _ Level, fields *[]Field) {
 
 // EncodeStackTrace encodes the stack trace of the log message.
 func (e *JSONEncoder) EncodeStackTrace(buf *Buffer, skip int) {
-	buf.WriteBytes(',', '"')
-	buf.WriteString(e.KeyStackTrace)
-	buf.WriteBytes('"', ':', '"')
+	buf.WriteString(e.tracePrefix)
 	writeStackTraceEscaped(buf, skip)
 	buf.WriteBytes('"')
 }
@@ -102,15 +120,6 @@ func (e *JSONEncoder) EncodeStackTrace(buf *Buffer, skip int) {
 // End writes the end of the log message.
 func (e *JSONEncoder) End(buf *Buffer) {
 	buf.WriteBytes('}', '\n')
-}
-
-// writeSafeField writes a field to the buffer not worrying about escaping it.
-func (e *JSONEncoder) writeSafeField(buf *Buffer, key, val string) {
-	buf.WriteBytes('"')
-	buf.WriteString(key)
-	buf.WriteBytes('"', ':', '"')
-	buf.WriteString(val)
-	buf.WriteBytes('"')
 }
 
 // nolint:gocyclo
