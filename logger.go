@@ -207,7 +207,7 @@ func writeStackFrames(buf *Buffer, skip int, indent, newline string) {
 	}
 }
 
-func timeCache(format string, precision time.Duration) func(time.Time) string {
+func timeCache(prefix, suffix, format string, precision time.Duration) func(time.Time) string {
 	var lastTime time.Time
 	var lastTimeStr string
 
@@ -217,7 +217,7 @@ func timeCache(format string, precision time.Duration) func(time.Time) string {
 		}
 
 		lastTime = t
-		lastTimeStr = t.Format(format)
+		lastTimeStr = prefix + t.Format(format) + suffix
 		return lastTimeStr
 	}
 }
