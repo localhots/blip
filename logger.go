@@ -76,6 +76,14 @@ func New(cfg Config) *Logger {
 		cfg.Encoder = NewConsoleEncoder()
 	}
 
+	// Pre-compute cached values for built-in encoders
+	switch enc := cfg.Encoder.(type) {
+	case *JSONEncoder:
+		enc.prepare()
+	case *ConsoleEncoder:
+		enc.prepare()
+	}
+
 	return &Logger{
 		cfg: cfg,
 		enc: cfg.Encoder,
@@ -147,7 +155,6 @@ func (l *Logger) Fatal(ctx context.Context, msg string, fields ...F) {
 
 func (l *Logger) print(lev Level, msg string, fields *[]Field) {
 	buf := getBuffer()
-	defer putBuffer(buf)
 
 	l.enc.Start(buf)
 	l.enc.EncodeTime(buf)
@@ -165,6 +172,8 @@ func (l *Logger) print(lev Level, msg string, fields *[]Field) {
 	l.lock.Lock()
 	_, _ = l.cfg.Output.Write(buf.b)
 	l.lock.Unlock()
+
+	putBuffer(buf)
 }
 
 //
