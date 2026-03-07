@@ -67,6 +67,18 @@ func (buf *Buffer) WriteTime(t time.Time, format string) {
 	buf.b = t.AppendFormat(buf.b, format)
 }
 
+// needsEscape is a lookup table for ASCII bytes that need JSON escaping.
+// true for control characters (< 0x20), double quote, and backslash.
+var needsEscape [128]bool
+
+func init() {
+	for i := range 0x20 {
+		needsEscape[i] = true
+	}
+	needsEscape['"'] = true
+	needsEscape['\\'] = true
+}
+
 // WriteEscapedString writes a string to the buffer, escaping special characters
 // as needed for JSON. Valid UTF-8 is passed through as-is. Invalid UTF-8
 // sequences are replaced with \ufffd. The string is enclosed in double quotes.
@@ -95,7 +107,7 @@ func (buf *Buffer) WriteEscapedString(str string) {
 			} else {
 				cur += size
 			}
-		} else if b < 0x20 || b == '"' || b == '\\' {
+		} else if needsEscape[b] {
 			if last < cur {
 				buf.WriteString(str[last:cur])
 			}
