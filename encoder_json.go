@@ -172,24 +172,3 @@ func (e *JSONEncoder) writeAny(buf *Buffer, val any) {
 		_ = json.NewEncoder(buf).Encode(v)
 	}
 }
-
-func (e *JSONEncoder) levelString(lev Level) string {
-	switch lev {
-	case LevelTrace:
-		return "trace"
-	case LevelDebug:
-		return "debug"
-	case LevelInfo:
-		return "info"
-	case LevelWarn:
-		return "warn"
-	case LevelError:
-		return "error"
-	case LevelPanic:
-		return "panic"
-	case LevelFatal:
-		return "fatal"
-	default:
-		panic("unreachable")
-	}
-}
