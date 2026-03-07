@@ -57,7 +57,7 @@ func NewConsoleEncoder() *ConsoleEncoder {
 
 // prepare pre-computes cached values. Called from Logger.New().
 func (e *ConsoleEncoder) prepare() {
-	// Pre-build level labels and color prefixes
+	// Pre-build level labels (with trailing space) and color prefixes
 	colors := [7]string{
 		colorOffWhite,                // Trace
 		colorOffWhite,                // Debug
@@ -70,15 +70,15 @@ func (e *ConsoleEncoder) prepare() {
 	for i, name := range levelNames {
 		e.levelColors[i] = colors[i]
 		if e.Color {
-			e.levelLabels[i] = colors[i] + name + fontReset
+			e.levelLabels[i] = colors[i] + name + fontReset + " "
 		} else {
-			e.levelLabels[i] = name
+			e.levelLabels[i] = name + " "
 		}
 	}
 
-	// Initialize time cache
+	// Initialize time cache (includes trailing space)
 	if e.TimeFormat != "" && e.TimePrecision > 0 {
-		e.timeCache = timeCache(e.TimeFormat, e.TimePrecision)
+		e.timeCache = timeCache("", " ", e.TimeFormat, e.TimePrecision)
 	}
 }
 
@@ -87,37 +87,28 @@ func (e *ConsoleEncoder) Start(_ *Buffer) {}
 
 // EncodeTime encodes the time of the log message.
 func (e *ConsoleEncoder) EncodeTime(buf *Buffer) {
+	if e.timeCache != nil {
+		buf.WriteString(e.timeCache(timeNow()))
+		return
+	}
+	e.encodeTimeSlow(buf)
+}
+
+func (e *ConsoleEncoder) encodeTimeSlow(buf *Buffer) {
 	if e.TimeFormat == "" {
 		return
 	}
-	if e.timeCache != nil {
-		buf.WriteString(e.timeCache(timeNow()))
-	} else {
-		buf.WriteTime(timeNow(), e.TimeFormat)
-	}
+	buf.WriteTime(timeNow(), e.TimeFormat)
 	buf.WriteBytes(' ')
 }
 
 // EncodeLevel encodes the log level of the message.
 func (e *ConsoleEncoder) EncodeLevel(buf *Buffer, lev Level) {
 	buf.WriteString(e.levelLabels[lev-1])
-	buf.WriteBytes(' ')
 }
 
 // EncodeMessage encodes the log message.
 func (e *ConsoleEncoder) EncodeMessage(buf *Buffer, msg string) {
-	if e.MinMessageWidth == 0 {
-		// Fast path: no padding. No references to padding code so this stays minimal.
-		if e.Color {
-			buf.WriteString(fontBold)
-		}
-		buf.WriteString(msg)
-		if e.Color {
-			buf.WriteString(fontReset)
-		}
-		return
-	}
-	// Padding path
 	if e.Color {
 		buf.WriteString(fontBold)
 	}
@@ -125,7 +116,12 @@ func (e *ConsoleEncoder) EncodeMessage(buf *Buffer, msg string) {
 	if e.Color {
 		buf.WriteString(fontReset)
 	}
+	if e.MinMessageWidth > 0 {
+		e.padMessage(buf, msg)
+	}
+}
 
+func (e *ConsoleEncoder) padMessage(buf *Buffer, msg string) {
 	// Pad the message to the configured width +2 spaces to separate it from
 	// the fields.
 	if padLen := e.MinMessageWidth + 2 - len(msg); padLen > 0 {

@@ -17,9 +17,8 @@ type JSONEncoder struct {
 	KeyStackTrace  string
 
 	timeCache   func(time.Time) string
-	levelValues [7]string // Pre-built: "trace","debug","info",...
+	levelFull   [7]string // Pre-built complete: `,"level":"info"`
 	timePrefix  string    // `"time":"`
-	levelPrefix string    // `,"level":"` or `"level":"`
 	msgPrefix   string    // `,"message":`
 	tracePrefix string    // `,"stacktrace":"`
 }
@@ -42,22 +41,27 @@ func NewJSONEncoder() *JSONEncoder {
 
 // prepare pre-computes cached values. Called from Logger.New().
 func (e *JSONEncoder) prepare() {
-	// Pre-build level values
-	e.levelValues = [7]string{"trace", "debug", "info", "warn", "error", "panic", "fatal"}
+	levelValues := [7]string{"trace", "debug", "info", "warn", "error", "panic", "fatal"}
 
 	// Pre-build structural prefixes
+	var levelPrefix string
 	if e.TimeFormat != "" {
 		e.timePrefix = `"` + e.KeyTime + `":"`
-		e.levelPrefix = `,"` + e.KeyLevel + `":"`
+		levelPrefix = `,"` + e.KeyLevel + `":"`
 	} else {
-		e.levelPrefix = `"` + e.KeyLevel + `":"`
+		levelPrefix = `"` + e.KeyLevel + `":"`
 	}
 	e.msgPrefix = `,"` + e.KeyMessage + `":`
 	e.tracePrefix = `,"` + e.KeyStackTrace + `":"`
 
+	// Pre-build complete level fields: ,"level":"info"
+	for i, v := range levelValues {
+		e.levelFull[i] = levelPrefix + v + `"`
+	}
+
 	// Initialize time cache
 	if e.TimeFormat != "" && e.TimePrecision > 0 {
-		e.timeCache = timeCache(e.TimeFormat, e.TimePrecision)
+		e.timeCache = timeCache(e.timePrefix, `"`, e.TimeFormat, e.TimePrecision)
 	}
 }
 
@@ -68,26 +72,25 @@ func (e *JSONEncoder) Start(buf *Buffer) {
 
 // EncodeTime encodes the time of the log message.
 func (e *JSONEncoder) EncodeTime(buf *Buffer) {
+	if e.timeCache != nil {
+		buf.WriteString(e.timeCache(timeNow()))
+		return
+	}
+	e.encodeTimeSlow(buf)
+}
+
+func (e *JSONEncoder) encodeTimeSlow(buf *Buffer) {
 	if e.timePrefix == "" {
 		return
 	}
-
-	if e.timeCache != nil {
-		buf.WriteString(e.timePrefix)
-		buf.WriteString(e.timeCache(timeNow()))
-		buf.WriteBytes('"')
-	} else {
-		buf.WriteString(e.timePrefix)
-		buf.WriteTime(timeNow(), e.TimeFormat)
-		buf.WriteBytes('"')
-	}
+	buf.WriteString(e.timePrefix)
+	buf.WriteTime(timeNow(), e.TimeFormat)
+	buf.WriteBytes('"')
 }
 
 // EncodeLevel encodes the log level of the message.
 func (e *JSONEncoder) EncodeLevel(buf *Buffer, lev Level) {
-	buf.WriteString(e.levelPrefix)
-	buf.WriteString(e.levelValues[lev-1])
-	buf.WriteBytes('"')
+	buf.WriteString(e.levelFull[lev-1])
 }
 
 // EncodeMessage encodes the log message.
