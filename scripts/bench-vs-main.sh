@@ -38,15 +38,6 @@ if [ -f "$MAIN_FILE" ]; then
   benchstat "$MAIN_FILE" "$TMP/current.txt" 2>&1 | tee "$VS_MAIN_FILE"
 fi
 
-# Compare vs pre-optimization baseline
-if [ -f "$BASELINE_FILE" ]; then
-  echo ""
-  echo "=== vs pre-optimization baseline ==="
-  echo ""
-  VS_BASELINE_FILE="$TMP/vs_baseline.txt"
-  benchstat "$BASELINE_FILE" "$TMP/current.txt" 2>&1 | tee "$VS_BASELINE_FILE"
-fi
-
 # Generate BENCH.md
 python3 "$SCRIPT_DIR/bench-to-md.py" \
   "$TMP/current.txt" \
