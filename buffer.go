@@ -37,11 +37,6 @@ func (buf *Buffer) WriteString(str string) {
 	buf.b = append(buf.b, str...)
 }
 
-// WriteRune writes a rune to the buffer. It encodes the rune as UTF-8.
-func (buf *Buffer) WriteRune(r rune) {
-	buf.b = utf8.AppendRune(buf.b, r)
-}
-
 // WriteInt writes an int64 value to the buffer.
 func (buf *Buffer) WriteInt(i int64) {
 	buf.b = strconv.AppendInt(buf.b, i, 10)
@@ -72,34 +67,52 @@ func (buf *Buffer) WriteTime(t time.Time, format string) {
 	buf.b = t.AppendFormat(buf.b, format)
 }
 
+// needsEscape is a lookup table for ASCII bytes that need JSON escaping.
+// true for control characters (< 0x20), double quote, and backslash.
+var needsEscape [128]bool
+
+func init() {
+	for i := range 0x20 {
+		needsEscape[i] = true
+	}
+	needsEscape['"'] = true
+	needsEscape['\\'] = true
+}
+
 // WriteEscapedString writes a string to the buffer, escaping special characters
-// as needed. It handles both ASCII and Unicode characters. The string is
-// enclosed in double quotes.
+// as needed for JSON. Valid UTF-8 is passed through as-is. Invalid UTF-8
+// sequences are replaced with \ufffd. The string is enclosed in double quotes.
 func (buf *Buffer) WriteEscapedString(str string) {
 	buf.WriteBytes('"')
 	// last is the last index of the string that has been written to the buffer.
 	// cur is the current index of the string being processed.
 	//
 	// Read the string byte by byte and escape any characters that need it.
-	// Check for ASCII characters first and then for other characters outside of
-	// the ASCII printable range. Write to the buffer as we go.
+	// Valid multi-byte UTF-8 sequences are skipped over and included in the
+	// next batch flush. Write to the buffer as we go.
 	last := 0
 	for cur := 0; cur < len(str); {
 		b := str[cur]
-		if b < 0x20 || b == '"' || b == '\\' || b >= 0x80 {
-			// Write unescaped segment
+		switch {
+		case b >= 0x80:
+			_, size := utf8.DecodeRuneInString(str[cur:])
+			if size == 1 {
+				// \uFFFD is the replacement character for invalid UTF-8
+				// sequences (�).
+				buf.flushAndWrite(str, last, cur, `\ufffd`)
+				cur++
+				last = cur
+			} else {
+				cur += size
+			}
+		case needsEscape[b]:
 			if last < cur {
 				buf.WriteString(str[last:cur])
 			}
-			if b >= 0x80 {
-				size := buf.writeEscapedUTF8(str[cur:])
-				cur += size
-			} else {
-				buf.writeEscapedASCII(b)
-				cur++
-			}
+			buf.writeEscapedByte(b)
+			cur++
 			last = cur
-		} else {
+		default:
 			cur++
 		}
 	}
@@ -110,14 +123,14 @@ func (buf *Buffer) WriteEscapedString(str string) {
 	buf.WriteBytes('"')
 }
 
-// WriteBase64 writes a byte slice to the buffer as a base64-encoded string.
-func (buf *Buffer) WriteBase64(b64enc *base64.Encoding, data []byte) {
-	buf.WriteBytes('"')
-	buf.b = b64enc.AppendEncode(buf.b, data)
-	buf.WriteBytes('"')
+func (buf *Buffer) flushAndWrite(str string, last, cur int, replacement string) {
+	if last < cur {
+		buf.WriteString(str[last:cur])
+	}
+	buf.WriteString(replacement)
 }
 
-func (buf *Buffer) writeEscapedASCII(b byte) {
+func (buf *Buffer) writeEscapedByte(b byte) {
 	switch b {
 	case '"', '\\':
 		buf.WriteBytes('\\', b)
@@ -131,21 +144,14 @@ func (buf *Buffer) writeEscapedASCII(b byte) {
 		buf.WriteBytes('\\', 'r')
 	case '\t':
 		buf.WriteBytes('\\', 't')
-	default:
-		// Ignore other control characters
 	}
 }
 
-func (buf *Buffer) writeEscapedUTF8(str string) int {
-	r, size := utf8.DecodeRuneInString(str)
-	if r == utf8.RuneError && size == 1 {
-		// \uFFFD is the replacement character for invalid UTF-8 sequences (�).
-		// It looks like a diamond with a question mark inside.
-		buf.WriteBytes('\\', 'u', 'f', 'f', 'f', 'd')
-		return 1
-	}
-	buf.WriteRune(r)
-	return size
+// WriteBase64 writes a byte slice to the buffer as a base64-encoded string.
+func (buf *Buffer) WriteBase64(b64enc *base64.Encoding, data []byte) {
+	buf.WriteBytes('"')
+	buf.b = b64enc.AppendEncode(buf.b, data)
+	buf.WriteBytes('"')
 }
 
 //

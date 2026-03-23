@@ -16,7 +16,11 @@ type JSONEncoder struct {
 	KeyMessage     string
 	KeyStackTrace  string
 
-	timeCache func(time.Time) string
+	timeCache   func(time.Time) string
+	levelFull   [7]string // Pre-built complete: `,"level":"info"`
+	timePrefix  string    // `"time":"`
+	msgPrefix   string    // `,"message":`
+	tracePrefix string    // `,"stacktrace":"`
 }
 
 var _ Encoder = (*JSONEncoder)(nil)
@@ -35,6 +39,32 @@ func NewJSONEncoder() *JSONEncoder {
 	}
 }
 
+// prepare pre-computes cached values. Called from Logger.New().
+func (e *JSONEncoder) prepare() {
+	levelValues := [7]string{"trace", "debug", "info", "warn", "error", "panic", "fatal"}
+
+	// Pre-build structural prefixes
+	var levelPrefix string
+	if e.TimeFormat != "" {
+		e.timePrefix = `"` + e.KeyTime + `":"`
+		levelPrefix = `,"` + e.KeyLevel + `":"`
+	} else {
+		levelPrefix = `"` + e.KeyLevel + `":"`
+	}
+	e.msgPrefix = `,"` + e.KeyMessage + `":`
+	e.tracePrefix = `,"` + e.KeyStackTrace + `":"`
+
+	// Pre-build complete level fields: ,"level":"info"
+	for i, v := range levelValues {
+		e.levelFull[i] = levelPrefix + v + `"`
+	}
+
+	// Initialize time cache
+	if e.TimeFormat != "" && e.TimePrecision > 0 {
+		e.timeCache = timeCache(e.timePrefix, `"`, e.TimeFormat, e.TimePrecision)
+	}
+}
+
 // Start writes the beginning of the log message.
 func (e *JSONEncoder) Start(buf *Buffer) {
 	buf.WriteBytes('{')
@@ -42,37 +72,30 @@ func (e *JSONEncoder) Start(buf *Buffer) {
 
 // EncodeTime encodes the time of the log message.
 func (e *JSONEncoder) EncodeTime(buf *Buffer) {
-	if e.TimeFormat == "" {
+	if e.timeCache != nil {
+		buf.WriteString(e.timeCache(timeNow()))
 		return
 	}
+	e.encodeTimeSlow(buf)
+}
 
-	if e.TimePrecision > 0 {
-		if e.timeCache == nil {
-			e.timeCache = timeCache(e.TimeFormat, e.TimePrecision)
-		}
-		e.writeSafeField(buf, e.KeyTime, e.timeCache(timeNow()))
-	} else {
-		buf.WriteBytes('"')
-		buf.WriteString(e.KeyTime)
-		buf.WriteBytes('"', ':', '"')
-		buf.WriteTime(timeNow(), e.TimeFormat)
-		buf.WriteBytes('"')
+func (e *JSONEncoder) encodeTimeSlow(buf *Buffer) {
+	if e.timePrefix == "" {
+		return
 	}
+	buf.WriteString(e.timePrefix)
+	buf.WriteTime(timeNow(), e.TimeFormat)
+	buf.WriteBytes('"')
 }
 
 // EncodeLevel encodes the log level of the message.
 func (e *JSONEncoder) EncodeLevel(buf *Buffer, lev Level) {
-	if e.TimeFormat != "" {
-		buf.WriteBytes(',')
-	}
-	e.writeSafeField(buf, e.KeyLevel, e.levelString(lev))
+	buf.WriteString(e.levelFull[lev-1])
 }
 
 // EncodeMessage encodes the log message.
 func (e *JSONEncoder) EncodeMessage(buf *Buffer, msg string) {
-	buf.WriteBytes(',', '"')
-	buf.WriteString(e.KeyMessage)
-	buf.WriteBytes('"', ':')
+	buf.WriteString(e.msgPrefix)
 	buf.WriteEscapedString(msg)
 }
 
@@ -92,24 +115,14 @@ func (e *JSONEncoder) EncodeFields(buf *Buffer, _ Level, fields *[]Field) {
 
 // EncodeStackTrace encodes the stack trace of the log message.
 func (e *JSONEncoder) EncodeStackTrace(buf *Buffer, skip int) {
-	buf.WriteBytes(',', '"')
-	buf.WriteString(e.KeyStackTrace)
-	buf.WriteBytes('"', ':')
-	buf.WriteEscapedString(stackTrace(skip))
+	buf.WriteString(e.tracePrefix)
+	writeStackTraceEscaped(buf, skip)
+	buf.WriteBytes('"')
 }
 
 // End writes the end of the log message.
 func (e *JSONEncoder) End(buf *Buffer) {
 	buf.WriteBytes('}', '\n')
-}
-
-// writeSafeField writes a field to the buffer not worrying about escaping it.
-func (e *JSONEncoder) writeSafeField(buf *Buffer, key, val string) {
-	buf.WriteBytes('"')
-	buf.WriteString(key)
-	buf.WriteBytes('"', ':', '"')
-	buf.WriteString(val)
-	buf.WriteBytes('"')
 }
 
 // nolint:gocyclo
@@ -155,29 +168,10 @@ func (e *JSONEncoder) writeAny(buf *Buffer, val any) {
 		buf.WriteBytes('"')
 		buf.WriteTime(v, TimeFieldFormat)
 		buf.WriteBytes('"')
+	case error:
+		buf.WriteEscapedString(v.Error())
 	default:
 		//nolint:errchkjson
 		_ = json.NewEncoder(buf).Encode(v)
-	}
-}
-
-func (e *JSONEncoder) levelString(lev Level) string {
-	switch lev {
-	case LevelTrace:
-		return "trace"
-	case LevelDebug:
-		return "debug"
-	case LevelInfo:
-		return "info"
-	case LevelWarn:
-		return "warn"
-	case LevelError:
-		return "error"
-	case LevelPanic:
-		return "panic"
-	case LevelFatal:
-		return "fatal"
-	default:
-		panic("unreachable")
 	}
 }

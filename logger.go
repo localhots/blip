@@ -6,9 +6,7 @@
 package blip
 
 import (
-	"bytes"
 	"context"
-	"fmt"
 	"io"
 	"os"
 	"runtime"
@@ -76,6 +74,14 @@ func New(cfg Config) *Logger {
 	}
 	if cfg.Encoder == nil {
 		cfg.Encoder = NewConsoleEncoder()
+	}
+
+	// Pre-compute cached values for built-in encoders
+	switch enc := cfg.Encoder.(type) {
+	case *JSONEncoder:
+		enc.prepare()
+	case *ConsoleEncoder:
+		enc.prepare()
 	}
 
 	return &Logger{
@@ -149,7 +155,6 @@ func (l *Logger) Fatal(ctx context.Context, msg string, fields ...F) {
 
 func (l *Logger) print(lev Level, msg string, fields *[]Field) {
 	buf := getBuffer()
-	defer putBuffer(buf)
 
 	l.enc.Start(buf)
 	l.enc.EncodeTime(buf)
@@ -167,31 +172,42 @@ func (l *Logger) print(lev Level, msg string, fields *[]Field) {
 	l.lock.Lock()
 	_, _ = l.cfg.Output.Write(buf.b)
 	l.lock.Unlock()
+
+	putBuffer(buf)
 }
 
 //
 // Helpers
 //
 
-func stackTrace(skip int) string {
-	// Get up to 100 stack frames
+func writeStackTrace(buf *Buffer, skip int) {
+	writeStackFrames(buf, skip, "\n\t", "\n")
+}
+
+func writeStackTraceEscaped(buf *Buffer, skip int) {
+	writeStackFrames(buf, skip, `\n\t`, `\n`)
+}
+
+func writeStackFrames(buf *Buffer, skip int, indent, newline string) {
 	pc := make([]uintptr, 100)
-	// +2 frames to skip for runtime.Callers and stackTrace itself
 	n := runtime.Callers(skip+2, pc)
 	frames := runtime.CallersFrames(pc[:n])
 
-	var buf bytes.Buffer
 	for {
 		f, more := frames.Next()
-		buf.WriteString(fmt.Sprintf("%s\n\t%s:%d\n", f.Function, f.File, f.Line))
+		buf.WriteString(f.Function)
+		buf.WriteString(indent)
+		buf.WriteString(f.File)
+		buf.WriteBytes(':')
+		buf.WriteInt(int64(f.Line))
+		buf.WriteString(newline)
 		if !more {
 			break
 		}
 	}
-	return buf.String()
 }
 
-func timeCache(format string, precision time.Duration) func(time.Time) string {
+func timeCache(prefix, suffix, format string, precision time.Duration) func(time.Time) string {
 	var lastTime time.Time
 	var lastTimeStr string
 
@@ -201,7 +217,7 @@ func timeCache(format string, precision time.Duration) func(time.Time) string {
 		}
 
 		lastTime = t
-		lastTimeStr = t.Format(format)
+		lastTimeStr = prefix + t.Format(format) + suffix
 		return lastTimeStr
 	}
 }
