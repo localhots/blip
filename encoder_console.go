@@ -34,10 +34,10 @@ const (
 	fontReset     = "\033[0m"
 )
 
-var (
-	_ Encoder = (*ConsoleEncoder)(nil)
-	padding   = strings.Repeat(" ", 128)
+var _ Encoder = (*ConsoleEncoder)(nil)
 
+var (
+	padding    = strings.Repeat(" ", 128)
 	levelNames = [7]string{"TRAC", "DEBU", "INFO", "WARN", "ERRO", "PANI", "FATA"}
 )
 
@@ -59,13 +59,13 @@ func NewConsoleEncoder() *ConsoleEncoder {
 func (e *ConsoleEncoder) prepare() {
 	// Pre-build level labels (with trailing space) and color prefixes
 	colors := [7]string{
-		colorOffWhite,                // Trace
-		colorOffWhite,                // Debug
-		colorCyan,                    // Info
-		colorYellow,                  // Warn
-		colorRed,                     // Error
-		colorRedBg + colorWhite,      // Panic
-		colorRedBg + colorWhite,      // Fatal
+		colorOffWhite,           // Trace
+		colorOffWhite,           // Debug
+		colorCyan,               // Info
+		colorYellow,             // Warn
+		colorRed,                // Error
+		colorRedBg + colorWhite, // Panic
+		colorRedBg + colorWhite, // Fatal
 	}
 	for i, name := range levelNames {
 		e.levelColors[i] = colors[i]

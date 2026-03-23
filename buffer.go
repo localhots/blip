@@ -93,41 +93,26 @@ func (buf *Buffer) WriteEscapedString(str string) {
 	last := 0
 	for cur := 0; cur < len(str); {
 		b := str[cur]
-		if b >= 0x80 {
+		switch {
+		case b >= 0x80:
 			_, size := utf8.DecodeRuneInString(str[cur:])
 			if size == 1 {
 				// \uFFFD is the replacement character for invalid UTF-8
 				// sequences (�).
-				if last < cur {
-					buf.WriteString(str[last:cur])
-				}
-				buf.WriteString(`\ufffd`)
+				buf.flushAndWrite(str, last, cur, `\ufffd`)
 				cur++
 				last = cur
 			} else {
 				cur += size
 			}
-		} else if needsEscape[b] {
+		case needsEscape[b]:
 			if last < cur {
 				buf.WriteString(str[last:cur])
 			}
-			switch b {
-			case '"', '\\':
-				buf.WriteBytes('\\', b)
-			case '\b':
-				buf.WriteBytes('\\', 'b')
-			case '\f':
-				buf.WriteBytes('\\', 'f')
-			case '\n':
-				buf.WriteBytes('\\', 'n')
-			case '\r':
-				buf.WriteBytes('\\', 'r')
-			case '\t':
-				buf.WriteBytes('\\', 't')
-			}
+			buf.writeEscapedByte(b)
 			cur++
 			last = cur
-		} else {
+		default:
 			cur++
 		}
 	}
@@ -136,6 +121,30 @@ func (buf *Buffer) WriteEscapedString(str string) {
 		buf.WriteString(str[last:])
 	}
 	buf.WriteBytes('"')
+}
+
+func (buf *Buffer) flushAndWrite(str string, last, cur int, replacement string) {
+	if last < cur {
+		buf.WriteString(str[last:cur])
+	}
+	buf.WriteString(replacement)
+}
+
+func (buf *Buffer) writeEscapedByte(b byte) {
+	switch b {
+	case '"', '\\':
+		buf.WriteBytes('\\', b)
+	case '\b':
+		buf.WriteBytes('\\', 'b')
+	case '\f':
+		buf.WriteBytes('\\', 'f')
+	case '\n':
+		buf.WriteBytes('\\', 'n')
+	case '\r':
+		buf.WriteBytes('\\', 'r')
+	case '\t':
+		buf.WriteBytes('\\', 't')
+	}
 }
 
 // WriteBase64 writes a byte slice to the buffer as a base64-encoded string.
